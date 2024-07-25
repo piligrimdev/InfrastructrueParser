@@ -2,7 +2,8 @@
     "templates": [
         {
             "section_name": "vulns",
-            "type": "blanc",
+            "type": "blank",
+            "html_section_name": "",
             "template": {
                 "title": "",
                 "severity": "",
@@ -13,6 +14,7 @@
         {
             "section_name": "head",
             "type": "head",
+            "html_section_name": "Обзор системы",
             "template": {
                 "name": "Computer Name",
                 "OS_name": "Operating System",
@@ -23,6 +25,7 @@
         {
             "section_name": "ip",
             "type": "list",
+            "html_section_name": "Network Adapters",
             "template": {
                 "address": "IP Address",
                 "netmask": "IP Subnet",
@@ -31,8 +34,9 @@
             }
         },
         {
-            "section_name": "procces",
+            "section_name": "proccess",
             "type": "list",
+            "html_section_name": "Open Ports",
             "template": {
                 "address": "Local Address",
                 "port": "Local Port",
@@ -43,6 +47,7 @@
         {
             "section_name": "package",
             "type": "list",
+            "html_section_name": "Службы и драйвера",
             "template": {
                 "name": "Name",
                 "type": "Service Type",

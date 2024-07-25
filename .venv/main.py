@@ -48,7 +48,13 @@ class Parser:
 
         return result
 
-def main(inputDir: pathlib.Path, outputDir: pathlib.Path) -> None:
+def main(inputDir: pathlib.Path, outputDir: pathlib.Path, template: pathlib.Path) -> None:
+    templates = json.load(template.open(encoding='utf-8'))['templates']
+    for i in templates:
+        for key in i['template'].keys():
+            if i['template'][key] == '' and i['type'] != 'blank':
+                i['template'][key] = None
+
     resultJson = {'servers': []}
     serverId = 0
 
@@ -58,25 +64,19 @@ def main(inputDir: pathlib.Path, outputDir: pathlib.Path) -> None:
             bsObj = BS(file, 'html.parser', from_encoding='utf-8')
             parser = Parser(bsObj)
 
-            server = parser.parse_section('Обзор системы', {'name': 'Computer Name',
-                                                            'OS_name': 'Operating System', 'id': None, 'tag': None})[0]
+            server = {}
+            for i in templates:
+                if i['type'] == 'head':
+                    server = parser.parse_section(i['html_section_name'], i['template'])[0]
+                    break
 
-            server['ip'] =  parser.parse_section('Network Adapters',
-                {'address': 'IP Address', 'netmask': 'IP Subnet', 'iface': 'Adapter Name',
-                 'mac': 'MAC Address'})
-
-            server['process'] =  parser.parse_section('Open Ports',
-                                              {'address': 'Local Address', 'port': 'Local Port',
-                                               'protocol': 'Port Protocol', 'process': 'Service Name'})
-
-            server['package'] =  parser.parse_section('Службы и драйвера',
-                                               {'name': 'Name', 'type': 'Service Type', 'version': None})
+            for i in templates:
+                if i['type'] == 'list':
+                    server[i['section_name']] = parser.parse_section(i['html_section_name'], i['template'])
+                elif i['type'] == 'blank':
+                    server[i['section_name']] = i['template']
 
             server['id'] = serverId
-            server['vulns'] = [{ "title": "",
-                                 "severity": "",
-                                 "name": "",
-                                 "version": "" }]
             resultJson['servers'].append(server)
         serverId += 1
 
@@ -89,11 +89,13 @@ if __name__ == '__main__':
     arg_parser = argparse.ArgumentParser('WinAudit parser')
     arg_parser.add_argument('inDir', help='Path to directory containing .html winaudit files')
     arg_parser.add_argument('outDir', help='Path to output directory for .json file')
+    arg_parser.add_argument('template', help='Path to parsing template')
 
     args = arg_parser.parse_args()
     inputDir = pathlib.Path(args.inDir)
     outputDir = pathlib.Path(args.outDir)
-    if inputDir.exists() and outputDir.exists():
-        main(inputDir, outputDir)
+    template = pathlib.Path(args.template)
+    if inputDir.exists() and outputDir.exists() and template.exists() and template.is_file():
+        main(inputDir, outputDir, template)
     else:
         print("Non-exsisting pathes or invalid input")
