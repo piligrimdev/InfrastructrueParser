@@ -61,16 +61,22 @@ def main(inputDir: pathlib.Path, outputDir: pathlib.Path) -> None:
             server = parser.parse_section('Обзор системы', {'name': 'Computer Name',
                                                             'OS_name': 'Operating System', 'id': None, 'tag': None})[0]
 
-            server['ip'] =  parser.parse_section('Routing Table',
-                {'address': 'Destination', 'netmask': 'Netmask', 'iface': 'Interface'})
+            server['ip'] =  parser.parse_section('Network Adapters',
+                {'address': 'IP Address', 'netmask': 'IP Subnet', 'iface': 'Adapter Name',
+                 'mac': 'MAC Address'})
 
             server['process'] =  parser.parse_section('Open Ports',
                                               {'address': 'Local Address', 'port': 'Local Port',
                                                'protocol': 'Port Protocol', 'process': 'Service Name'})
+
             server['package'] =  parser.parse_section('Службы и драйвера',
                                                {'name': 'Name', 'type': 'Service Type', 'version': None})
 
             server['id'] = serverId
+            server['vulns'] = [{ "title": "",
+                                 "severity": "",
+                                 "name": "",
+                                 "version": "" }]
             resultJson['servers'].append(server)
         serverId += 1
 
@@ -78,7 +84,6 @@ def main(inputDir: pathlib.Path, outputDir: pathlib.Path) -> None:
     with open(outputDir.absolute(), 'w', encoding='utf-8') as file:
         json.dump(resultJson, file, ensure_ascii=False, indent=4)
         print(f'Saved as {outputDir}')
-
 
 if __name__ == '__main__':
     arg_parser = argparse.ArgumentParser('WinAudit parser')

@@ -1,0 +1,53 @@
+{
+    "templates": [
+        {
+            "section_name": "vulns",
+            "type": "blanc",
+            "template": {
+                "title": "",
+                "severity": "",
+                "name": "",
+                "version": ""
+            }
+        },
+        {
+            "section_name": "head",
+            "type": "head",
+            "template": {
+                "name": "Computer Name",
+                "OS_name": "Operating System",
+                "id": "",
+                "tag": ""
+            }
+        },
+        {
+            "section_name": "ip",
+            "type": "list",
+            "template": {
+                "address": "IP Address",
+                "netmask": "IP Subnet",
+                "iface": "Adapter Name",
+                "mac": "MAC Address"
+            }
+        },
+        {
+            "section_name": "procces",
+            "type": "list",
+            "template": {
+                "address": "Local Address",
+                "port": "Local Port",
+                "protocol": "Port Protocol",
+                "process": "Service Name"
+            }
+        },
+        {
+            "section_name": "package",
+            "type": "list",
+            "template": {
+                "name": "Name",
+                "type": "Service Type",
+                "version": ""
+            }
+        }
+    ]
+}
