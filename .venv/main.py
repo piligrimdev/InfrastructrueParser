@@ -1,89 +1,94 @@
 from bs4 import BeautifulSoup as BS, PageElement
-import os
+import pathlib
+import json
+import argparse
 
+class Parser:
+    def __init__(self, bs_object: BS):
+        self.bs_object = bs_object
 
-def get_tables_by_section(bsObj: BS, section_start_name: str) -> list[PageElement]:
-    result = []
-    centers = bsObj.find_all('center')
-    anchor: PageElement
+    def parse_section(self, section_name: str, map_values: dict) -> list[dict]:
+        tables = self.get_tables_by_section(section_name)
+        return [self.parse_table(table, map_values) for table in tables]
 
-    for centerEl in centers:
-        bEl = centerEl.findChild('b')
-        if bEl is not None:
-            if section_start_name in bEl.text:
-                anchor = centerEl
-                break
+    def get_tables_by_section(self, section_start_name: str) -> list[PageElement]:
+        result = []
+        anchor: PageElement
 
-    sibling = anchor.find_next_sibling('table')
+        centers = self.bs_object.find_all('center')
+        for centerEl in centers:
+            bEl = centerEl.findChild('b')
+            if bEl is not None:
+                if section_start_name in bEl.text:
+                    anchor = centerEl
+                    break
 
-    while sibling.name != 'center':
-        if sibling.name == 'table':
-            result.append(sibling)
-        sibling = sibling.next_sibling
+        sibling = anchor.find_next_sibling('table')
+        while sibling.name != 'center':
+            if sibling.name == 'table':
+                result.append(sibling)
+            sibling = sibling.next_sibling
 
-    return result
+        return result
 
-def parse_overview(bsObj: BS, mId: int) -> dict:
-    result = {'name': '', 'OS_name': '', 'tag': '','id': mId}
+    def parse_table(self, table: PageElement, map_values: dict) -> dict:
+        result = {}
+        table_data = {}
 
-    rowsPassed = 0
-    table = get_tables_by_section(bsObj, 'Обзор системы')[0]
-    rows = table.findChildren('tr')
-
-    for row in rows:
-        td1, td2 = row.findChildren("td")
-        if td1.text == 'Computer Name':
-            result['name'] = td2.text
-            rowsPassed += 1
-        elif td1.text == 'Operating System':
-            result['OS_name'] = td2.text
-            rowsPassed += 1
-
-        if rowsPassed == 2:
-            break
-
-    return result
-
-def parse_procceses(bsObj: BS) -> list[dict]:
-    result = []
-    tables = get_tables_by_section(bsObj, 'Open Ports')
-
-    for table in tables:
         rows = table.findChildren("tr")
-
-        rowsPassed = 0
-        procces = {"address": "",
-                   "port": 0,
-                   "protocol": "",
-                   "process": ""}
-
         for row in rows:
             td1, td2 = row.findChildren("td")
-            if td1.text == 'Port Protocol':
-                procces['protocol'] = td2.text
-                rowsPassed += 1
-            elif td1.text == 'Local Address':
-                procces['address'] = td2.text
-                rowsPassed += 1
-            elif td1.text == 'Local Port':
-                procces['port'] = td2.text
-                rowsPassed += 1
-            elif td1.text == 'Service Name':
-                procces['process'] = td2.text
-                rowsPassed += 1
-            if rowsPassed == 4:
-                result.append(procces)
-                break
+            table_data[td1.text.strip()] = td2.text.strip()
 
-    return result
+        for item in map_values.items():
+            if item[1] is None:
+                result[item[0]] = ''
+                continue
+            result[item[0]] = table_data[item[1]]
+
+        return result
+
+def main(inputDir: pathlib.Path, outputDir: pathlib.Path) -> None:
+    resultJson = {'servers': []}
+    serverId = 0
+
+    htmlFiles = [f for f in inputDir.iterdir() if f.is_file() and f.name.endswith('.html')]
+    for fileName in htmlFiles:
+        with open(fileName.absolute(), 'r') as file:
+            bsObj = BS(file, 'html.parser', from_encoding='utf-8')
+            parser = Parser(bsObj)
+
+            server = parser.parse_section('Обзор системы', {'name': 'Computer Name',
+                                                            'OS_name': 'Operating System', 'id': None, 'tag': None})[0]
+
+            server['ip'] =  parser.parse_section('Routing Table',
+                {'address': 'Destination', 'netmask': 'Netmask', 'iface': 'Interface'})
+
+            server['process'] =  parser.parse_section('Open Ports',
+                                              {'address': 'Local Address', 'port': 'Local Port',
+                                               'protocol': 'Port Protocol', 'process': 'Service Name'})
+            server['package'] =  parser.parse_section('Службы и драйвера',
+                                               {'name': 'Name', 'type': 'Service Type', 'version': None})
+
+            server['id'] = serverId
+            resultJson['servers'].append(server)
+        serverId += 1
+
+    outputDir = outputDir.joinpath('servers.json')
+    with open(outputDir.absolute(), 'w', encoding='utf-8') as file:
+        json.dump(resultJson, file, ensure_ascii=False, indent=4)
+        print(f'Saved as {outputDir}')
 
 
-fileName = 'COMPUTER-249.html'
+if __name__ == '__main__':
+    arg_parser = argparse.ArgumentParser('WinAudit parser')
+    arg_parser.add_argument('inDir', help='Path to directory containing .html winaudit files')
+    arg_parser.add_argument('outDir', help='Path to output directory for .json file')
 
-with open(fileName, 'r') as file:
-    bsObj = BS(file, 'html.parser')
-
-    overview = parse_overview(bsObj, 0)
-    print(overview)
-    procces1 = parse_procceses(bsObj)
-    print(*procces1, sep='\n')
+    args = arg_parser.parse_args()
+    inputDir = pathlib.Path(args.inDir)
+    outputDir = pathlib.Path(args.outDir)
+    if inputDir.exists() and outputDir.exists():
+        main(inputDir, outputDir)
+    else:
+        print("Non-exsisting pathes or invalid input")
