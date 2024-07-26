@@ -77,12 +77,15 @@ def main(inputDir: pathlib.Path, outputDir: pathlib.Path, template: pathlib.Path
             for i in templates:
                 if i['type'] == 'list':
                     try:
-                        server[i['section_name']] = parser.parse_section(i['html_section_name'], i['template'])
+                        if i['section_name'] in server.keys():
+                            server[i['section_name']] += parser.parse_section(i['html_section_name'], i['template'])
+                        else:
+                            server[i['section_name']] = parser.parse_section(i['html_section_name'], i['template'])
                     except ValueError as e:
                         print(e)
-                        server[i['section_name']] = []
+                        if i['section_name'] not in server.keys():
+                            server[i['section_name']] = []
                 elif i['type'] == 'blank':
-                    #server[i['section_name']] = [i['template']]
                     server[i['section_name']] = []
 
             server['id'] = serverId

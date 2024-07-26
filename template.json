@@ -53,6 +53,16 @@
                 "type": "Service Type",
                 "version": ""
             }
+        },
+        {
+            "section_name": "package",
+            "type": "list",
+            "html_section_name": "Installed Programs",
+            "template": {
+                "name": "Name",
+                "type": "",
+                "version": "Version"
+            }
         }
     ]
 }
