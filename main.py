@@ -13,7 +13,7 @@ class Parser:
 
     def get_tables_by_section(self, section_start_name: str) -> list[PageElement]:
         result = []
-        anchor: PageElement
+        anchor = None
 
         centers = self.bs_object.find_all('center')
         for centerEl in centers:
@@ -22,6 +22,9 @@ class Parser:
                 if section_start_name in bEl.text:
                     anchor = centerEl
                     break
+
+        if anchor is None:
+            raise ValueError(f"No section named {section_start_name} founded")
 
         sibling = anchor.find_next_sibling('table')
         while sibling.name != 'center':
@@ -48,6 +51,7 @@ class Parser:
 
         return result
 
+
 def main(inputDir: pathlib.Path, outputDir: pathlib.Path, template: pathlib.Path) -> None:
     templates = json.load(template.open(encoding='utf-8'))['templates']
     for i in templates:
@@ -72,9 +76,14 @@ def main(inputDir: pathlib.Path, outputDir: pathlib.Path, template: pathlib.Path
 
             for i in templates:
                 if i['type'] == 'list':
-                    server[i['section_name']] = parser.parse_section(i['html_section_name'], i['template'])
+                    try:
+                        server[i['section_name']] = parser.parse_section(i['html_section_name'], i['template'])
+                    except ValueError as e:
+                        print(e)
+                        server[i['section_name']] = []
                 elif i['type'] == 'blank':
-                    server[i['section_name']] = [i['template']]
+                    #server[i['section_name']] = [i['template']]
+                    server[i['section_name']] = []
 
             server['id'] = serverId
             resultJson['servers'].append(server)
