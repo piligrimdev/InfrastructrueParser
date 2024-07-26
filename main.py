@@ -74,7 +74,7 @@ def main(inputDir: pathlib.Path, outputDir: pathlib.Path, template: pathlib.Path
                 if i['type'] == 'list':
                     server[i['section_name']] = parser.parse_section(i['html_section_name'], i['template'])
                 elif i['type'] == 'blank':
-                    server[i['section_name']] = i['template']
+                    server[i['section_name']] = [i['template']]
 
             server['id'] = serverId
             resultJson['servers'].append(server)
@@ -87,9 +87,9 @@ def main(inputDir: pathlib.Path, outputDir: pathlib.Path, template: pathlib.Path
 
 if __name__ == '__main__':
     arg_parser = argparse.ArgumentParser('WinAudit parser')
-    arg_parser.add_argument('inDir', help='Path to directory containing .html winaudit files')
-    arg_parser.add_argument('outDir', help='Path to output directory for .json file')
-    arg_parser.add_argument('template', help='Path to parsing template')
+    arg_parser.add_argument('-inDir', help='Path to directory containing .html winaudit files', required=True)
+    arg_parser.add_argument('-outDir', help='Path to output directory for .json file', required=True)
+    arg_parser.add_argument('-template', help='Path to parsing template', required=True)
 
     args = arg_parser.parse_args()
     inputDir = pathlib.Path(args.inDir)
@@ -98,4 +98,4 @@ if __name__ == '__main__':
     if inputDir.exists() and outputDir.exists() and template.exists() and template.is_file():
         main(inputDir, outputDir, template)
     else:
-        print("Non-exsisting pathes or invalid input")
+        print("Non-exsisting paths or invalid input")
