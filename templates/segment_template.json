@@ -1,0 +1,214 @@
+{
+  "segment": [
+    {
+      "name": "test",
+      "address": "string",
+      "guard": "string",
+      "owners": true,
+      "apparat_platform": true,
+      "fire_safety": "string",
+      "electricity": "string",
+      "KZ": "string",
+      "grid": false,
+      "network": true,
+      "internet": true,
+      "wifi": false,
+      "szi": true,
+      "super": false,
+      "bigdata": false,
+      "trans": false,
+      "shd_apply": false,
+      "mobile": false,
+      "scada": false,
+      "conditions": "string",
+      "rent": {
+        "contract_number": 124,
+        "contract_date": "string",
+        "owner_hardware": "string"
+      },
+      "servers_apply": true,
+      "servers": [
+        {
+          "id": 123,
+          "name": "",
+          "tag": "",
+          "OS_name": "",
+          "ip": [
+            {
+              "address": "",
+              "netmask": "",
+              "iface": ""
+            }
+          ],
+          "process": [
+            {
+              "address": "",
+              "port": 123,
+              "protocol": "",
+              "process": ""
+            }
+          ],
+          "package": [
+            {
+              "name": "",
+              "version": "",
+              "type": ""
+            }
+          ],
+          "vulns": [
+            {
+              "title": "",
+              "severity": "",
+              "name": "",
+              "version": ""
+            }
+          ]
+        }
+      ],
+      "hardware_apply": true,
+      "hardware": [
+        {
+          "name": "Web-сервер",
+          "tag": "",
+          "SN": "string",
+          "Model": "string",
+          "OS_apply": true,
+          "OS_name": "string",
+          "ip": "",
+          "locations": "",
+          "rack_locatoins": "",
+          "servers": [
+            {
+              "id": 123
+            }
+          ],
+          "virtualization_apply": true,
+          "virtualization_name": "string",
+          "virtual_servers": [
+            {
+              "id": 1
+            }
+          ]
+        }
+      ],
+      "controllers_apply": false,
+      "controllers": [
+        {
+          "name": "Датчик говна",
+          "tag": "",
+          "SN": "string",
+          "Model": "string",
+          "OS_apply": true,
+          "OS_name": "string",
+          "ip": "",
+          "type": "scada",
+          "locations": "",
+          "rack_locatoins": ""
+        }
+      ],
+      "external_media_apply": false,
+      "external_media": [
+        {
+          "tag": "",
+          "name": "",
+          "type": "",
+          "registration_number": "",
+          "SN": ""
+        }
+      ],
+      "shd_apply": false,
+      "shd": [
+        {
+          "tag": "",
+          "name": "QNAP",
+          "model": "",
+          "OS_apply": true,
+          "OS_name": "string",
+          "locations": "",
+          "rack_locatoins": "",
+          "type": "",
+          "services": [
+            {
+              "apply": true,
+              "ML": false
+            }
+          ],
+          "port": [
+            {
+              "apply": false,
+              "number": 80,
+              "protocol": "https",
+              "service": "nginx"
+            }
+          ]
+        }
+      ],
+      "telecom_apply": true,
+      "telecom": [
+        {
+          "tag": "",
+          "type": "Коммутатор",
+          "name": "example",
+          "SN": "string",
+          "model": "string",
+          "OS": "string",
+          "ip": "",
+          "locations": "",
+          "rack_locatoins": ""
+        }
+      ],
+      "virtual_segment_apply": false,
+      "virtual_segment": [
+        {
+          "operator": "example",
+          "model": "",
+          "name": "example",
+          "tag": "",
+          "dns": "",
+          "attestations_apply": false,
+          "locations": "",
+          "attestations": [
+            {
+              "name": "",
+              "date": "",
+              "number": ""
+            }
+          ],
+          "guard": "string",
+          "fire_safety": "string",
+          "electricity": "string",
+          "KZ": "string",
+          "conditions": "string",
+          "rent": {
+            "contract_number": 124,
+            "contract_date": "string",
+            "name": "string",
+            "owner": "string",
+            "matrix_risk": {
+              "url": "string",
+              "number": "string",
+              "date": "string"
+            }
+          },
+          "services": [
+            {
+              "name": "",
+              "tag": "",
+              "type": ""
+            }
+          ],
+          "virtual_servers": [
+            {
+              "id": 0
+            }
+          ]
+        }
+      ],
+      "operator_IS": "string",
+      "prikaz_o_vvode": {
+        "date": "string",
+        "number": 12312
+      }
+    }
+  ]
+}

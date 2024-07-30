@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from bs4 import BeautifulSoup as BS, PageElement
 import pathlib
 import json
@@ -145,7 +146,7 @@ def main(input_dir: pathlib.Path, output_dir: pathlib.Path, template: pathlib.Pa
 
         for file_name in html_files:
             with open(file_name, 'r', encoding='utf-8', errors='ignore') as file:
-                bs_obj = BS(file, 'html.parser', from_encoding=file.encoding)
+                bs_obj = BS(file, 'html.parser', from_encoding='utf-8')
                 title = bs_obj.find('head').find('title').text
 
                 if 'WinAudit' in title:
@@ -156,13 +157,13 @@ def main(input_dir: pathlib.Path, output_dir: pathlib.Path, template: pathlib.Pa
         if winAudit_obj is not None:
             winaudit_result = parse_winaudit(winAudit_obj, templates)
         else:
-            print(f'No winaudit file founded in {c_dir}')
+            print(f'No winaudit file founded in {c_dir}. Check file for encoding')
             winaudit_result = winaudit_blank(templates)
 
         if scanoval_obj is not None:
             result_scanoval = parse_scanoval(scanoval_obj)
         else:
-            print(f'No scanoval file founded in {c_dir}')
+            print(f'No scanoval file founded in {c_dir}. Check file for encoding')
             result_scanoval = []
 
         winaudit_result['vulns'] = result_scanoval

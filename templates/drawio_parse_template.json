@@ -1,0 +1,61 @@
+{
+    "figures_recognition": {
+        "hardware": {
+            "param": "rounded",
+            "value": "0"
+        },
+        "controllers": {
+            "param": "rounded",
+            "value": "1"
+        },
+        "external_media": {
+            "param": "shape",
+            "value": "cylinder3"
+        },
+        "shd": {
+            "param": "rhombus",
+            "value": ""
+        },
+        "telecom": {
+            "param": "shape",
+            "value": "hexagon"
+        },
+        "virtual_segment": {
+            "param": "shape",
+            "value": "cloud"
+        }
+    },
+    "figures_text_mapping": {
+        "hardware": {
+            "name": "name",
+            "tag": "tag",
+            "model": "model",
+            "servers": "servers"
+        },
+        "controllers": {
+            "name": "name",
+            "tag": "tag",
+            "type": "type"
+        },
+        "external_media": {
+            "name": "name",
+            "tag": "tag",
+            "type": "type"
+        },
+        "shd": {
+            "name": "name",
+            "tag": "tag",
+            "type": "type"
+        },
+        "telecom": {
+            "name": "name",
+            "tag": "tag",
+            "type": "type"
+        },
+        "virtual_segment": {
+            "name": "name",
+            "tag": "tag",
+            "operator": "operator"
+        }
+    }
+}
