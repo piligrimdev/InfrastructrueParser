@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup as BS, PageElement
 import pathlib
 import json
 import argparse
+from drawio_parse import parse_drawio
 
 
 class WinAuditParser:
@@ -12,7 +13,7 @@ class WinAuditParser:
 
     def parse_section(self, section_name: str, map_values: dict) -> list[dict]:
         tables = self.get_tables_by_section(section_name)
-        return [self.parse_table(table, map_values) for table in tables]
+        return [WinAuditParser.parse_table(table, map_values) for table in tables]
 
     def get_tables_by_section(self, section_start_name: str) -> list[PageElement]:
         result = []
@@ -37,7 +38,8 @@ class WinAuditParser:
 
         return result
 
-    def parse_table(self, table: PageElement, map_values: dict) -> dict:
+    @staticmethod
+    def parse_table(table: PageElement, map_values: dict) -> dict:
         result = {}
         table_data = {}
 
@@ -130,7 +132,7 @@ def winaudit_blank(templates: dict) -> dict:
     return server
 
 
-def main(input_dir: pathlib.Path, output_dir: pathlib.Path, template: pathlib.Path) -> None:
+def parse_servers(input_dir: pathlib.Path, template: pathlib.Path) -> dict:
     templates = json.load(template.open(encoding='utf-8'))['templates']
 
     result = dict()
@@ -141,8 +143,8 @@ def main(input_dir: pathlib.Path, output_dir: pathlib.Path, template: pathlib.Pa
     for c_dir in dirs:
         html_files = [f.absolute() for f in c_dir.iterdir() if f.is_file() and f.name.endswith('.html')]
 
-        scanoval_obj: BS = None
-        winAudit_obj: BS = None
+        scanoval_obj = None
+        winaudit_obj = None
 
         for file_name in html_files:
             with open(file_name, 'r', encoding='utf-8', errors='ignore') as file:
@@ -150,12 +152,12 @@ def main(input_dir: pathlib.Path, output_dir: pathlib.Path, template: pathlib.Pa
                 title = bs_obj.find('head').find('title').text
 
                 if 'WinAudit' in title:
-                    winAudit_obj = bs_obj
+                    winaudit_obj = bs_obj
                 elif 'Отчет по найденным уязвимостям' in title:
                     scanoval_obj = bs_obj
 
-        if winAudit_obj is not None:
-            winaudit_result = parse_winaudit(winAudit_obj, templates)
+        if winaudit_obj is not None:
+            winaudit_result = parse_winaudit(winaudit_obj, templates)
         else:
             print(f'No winaudit file founded in {c_dir}. Check file for encoding')
             winaudit_result = winaudit_blank(templates)
@@ -173,27 +175,46 @@ def main(input_dir: pathlib.Path, output_dir: pathlib.Path, template: pathlib.Pa
 
         server_id += 1
 
-    output_file = output_dir.joinpath('servers.json')
+    return result
+
+
+def main(input_dir: pathlib.Path, output_dir: pathlib.Path,
+         servers_template: pathlib.Path, drawio_template: pathlib.Path, result_template: pathlib.Path) -> None:
+
+    segment = parse_drawio(input_dir, drawio_template, result_template)
+    servers = parse_servers(input_dir, servers_template)
+
+    segment['segment'][0]['servers'] = servers['servers']
+
+    output_file = output_dir.joinpath('result.json')
     with open(output_file.absolute(), 'w', encoding='utf-8') as file:
-        json.dump(result, file, ensure_ascii=False, indent=4)
+        json.dump(segment, file, ensure_ascii=False, indent=4)
         print(f'Saved as {output_file}')
 
 
 if __name__ == '__main__':
     arg_parser = argparse.ArgumentParser('WinAudit parser')
 
-    arg_parser.add_argument('-inDir', help='Path to directory containing directoires with winaudit'
+    arg_parser.add_argument('-inDir', help='Path to directory containing drawio .xml file '
+                                           'and directoires with winaudit'
                                            ' and scanoval .html files', required=True)
     arg_parser.add_argument('-outDir', help='Path to output directory for resulting .json file',
                             required=True)
-    arg_parser.add_argument('-template', help='Path to parsing template', required=True)
+    arg_parser.add_argument('-servers-template', help='Path to servers parsing template (.json)',
+                            required=True)
+    arg_parser.add_argument('-drawio-template', help='Path to drawio parsing template (.json)',
+                            required=True)
+    arg_parser.add_argument('-result-template', help='Path to result template (.json)',
+                            required=True)
 
     args = arg_parser.parse_args()
     inputDir = pathlib.Path(args.inDir)
     outputDir = pathlib.Path(args.outDir)
-    template = pathlib.Path(args.template)
+    servers_template = pathlib.Path(args.servers_template)
+    drawio_template = pathlib.Path(args.drawio_template)
+    result_template = pathlib.Path(args.result_template)
 
-    if inputDir.exists() and outputDir.exists() and template.exists() and template.is_file():
-        main(inputDir, outputDir, template)
+    if inputDir.exists() and outputDir.exists() and servers_template.exists() and servers_template.is_file():
+        main(inputDir, outputDir, servers_template, drawio_template, result_template)
     else:
         print("Non-exsisting paths, files or invalid input")

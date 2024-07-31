@@ -29,7 +29,7 @@
         "hardware": {
             "name": "name",
             "tag": "tag",
-            "model": "model",
+            "Model": "model",
             "servers": "servers"
         },
         "controllers": {
