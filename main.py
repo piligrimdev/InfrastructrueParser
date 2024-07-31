@@ -169,11 +169,14 @@ def parse_servers(input_dir: pathlib.Path, template: pathlib.Path) -> dict:
             result_scanoval = []
 
         winaudit_result['vulns'] = result_scanoval
-        winaudit_result['id'] = server_id
+        if not c_dir.name.isnumeric():
+            winaudit_result['id'] = server_id
+            print(f'No id in directory name({c_dir.name}). Setting id as {server_id}')
+            server_id += 1
+        else:
+            winaudit_result['id'] = int(c_dir.name)
 
         result['servers'].append(winaudit_result)
-
-        server_id += 1
 
     return result
 
@@ -194,27 +197,54 @@ def main(input_dir: pathlib.Path, output_dir: pathlib.Path,
 
 if __name__ == '__main__':
     arg_parser = argparse.ArgumentParser('WinAudit parser')
+    required = arg_parser.add_argument_group('required arguments')
+    optional = arg_parser.add_argument_group('optional arguments')
 
-    arg_parser.add_argument('-inDir', help='Path to directory containing drawio .xml file '
+    required.add_argument('-inDir', help='Path to directory containing drawio .xml file '
                                            'and directoires with winaudit'
                                            ' and scanoval .html files', required=True)
-    arg_parser.add_argument('-outDir', help='Path to output directory for resulting .json file',
-                            required=True)
-    arg_parser.add_argument('-servers-template', help='Path to servers parsing template (.json)',
-                            required=True)
-    arg_parser.add_argument('-drawio-template', help='Path to drawio parsing template (.json)',
-                            required=True)
-    arg_parser.add_argument('-result-template', help='Path to result template (.json)',
-                            required=True)
+    optional.add_argument('-outDir', help='Path to output directory for resulting .json file')
+    optional.add_argument('-servers-template', help='Path to servers parsing template (.json)')
+    optional.add_argument('-drawio-template', help='Path to drawio parsing template (.json)')
+    optional.add_argument('-result-template', help='Path to result template (.json)')
 
     args = arg_parser.parse_args()
-    inputDir = pathlib.Path(args.inDir)
-    outputDir = pathlib.Path(args.outDir)
-    servers_template = pathlib.Path(args.servers_template)
-    drawio_template = pathlib.Path(args.drawio_template)
-    result_template = pathlib.Path(args.result_template)
 
-    if inputDir.exists() and outputDir.exists() and servers_template.exists() and servers_template.is_file():
-        main(inputDir, outputDir, servers_template, drawio_template, result_template)
+    inputDir = pathlib.Path(args.inDir)
+    if not inputDir.exists():
+        print("Ivalid input dir path")
+        quit()
+
+    if args.outDir is not None:
+        outputDir = pathlib.Path(args.outDir)
     else:
-        print("Non-exsisting paths, files or invalid input")
+        outputDir = inputDir
+    if not inputDir.exists():
+        print("Ivalid output dir path")
+        quit()
+
+    if args.servers_template is None:
+        servers_template = pathlib.Path('templates/winaudit_parse_template.json')
+    else:
+        servers_template = pathlib.Path(args.servers_template)
+    if not servers_template.exists() or not servers_template.is_file():
+        print("Ivalid servers template file path")
+        quit()
+
+    if args.drawio_template is None:
+        drawio_template = pathlib.Path('templates/drawio_parse_template.json')
+    else:
+        drawio_template = pathlib.Path(args.drawio_template)
+    if not drawio_template.exists() or not drawio_template.is_file():
+        print("Ivalid drawio template file path")
+        quit()
+
+    if args.result_template is None:
+        result_template = pathlib.Path('templates/segment_template.json')
+    else:
+        result_template = pathlib.Path(args.result_template)
+    if not result_template.exists() or not result_template.is_file():
+        print("Ivalid result template file path")
+        quit()
+
+    main(inputDir, outputDir, servers_template, drawio_template, result_template)
