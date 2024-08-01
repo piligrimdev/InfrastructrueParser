@@ -112,8 +112,12 @@ def write_to_result_json(data: dict, mapping_template: dict, segment_template: d
 def parse_drawio(drawio_path: pathlib.Path, parse_template_path: pathlib.Path,
                  result_template_path: pathlib.Path) -> dict:
 
-    drawio_file = [x for x in drawio_path.iterdir() if x.name.endswith('.xml') or x.name.endswith('.drawio')][0]
-    with open(drawio_file, 'r', encoding='utf-8') as file:
+    drawio_file = [x for x in drawio_path.iterdir() if x.name.endswith('.xml') or x.name.endswith('.drawio')]
+    if len(drawio_file) == 0:
+        print(f"No drawio file founded in '{drawio_path}'. Using segment template instead.")
+        return read_json(result_template_path)
+
+    with open(drawio_file[0], 'r', encoding='utf-8') as file:
         bs = BS(file, 'xml')
 
     parse_template = read_json(parse_template_path)

@@ -171,7 +171,7 @@ def parse_servers(input_dir: pathlib.Path, template: pathlib.Path) -> dict:
         winaudit_result['vulns'] = result_scanoval
         if not c_dir.name.isnumeric():
             winaudit_result['id'] = server_id
-            print(f'No id in directory name({c_dir.name}). Setting id as {server_id}')
+            print(f'No id in directory ({c_dir.name}). Setting id as {server_id}')
             server_id += 1
         else:
             winaudit_result['id'] = int(c_dir.name)
