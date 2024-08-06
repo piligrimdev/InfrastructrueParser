@@ -5,3 +5,5 @@
 *.html
 *.cfg
 /__pycache__
+secrets.json
+key.txt
