@@ -3,23 +3,32 @@
 import requests
 import json
 import paramiko
+from linux_audit_parser import *
 
 #paramiko.common.logging.basicConfig(level=paramiko.common.DEBUG)
 
+
 class SSHConsole:
     def __init__(self, host: str, user: str, pw: str, p_key: str):
-        self.connection = paramiko.SSHClient()
-        self.connection.set_missing_host_key_policy(paramiko.AutoAddPolicy()) # idk
-        lol = paramiko.Ed25519Key.from_private_key_file(p_key, pw)
-        self.connection.connect(host, username=user, pkey=lol)
+        self.host = host
+        self.user = user
+        self.pf = pw
+        self.key_path = p_key
 
-    def execute_command(self, command: str) -> tuple:
-        # hello
-        return self.connection.exec_command(command)
+    def execute_command(self, command: str) -> list[str]:
+        key = paramiko.Ed25519Key.from_private_key_file(self.key_path, self.pf)
+        with paramiko.SSHClient() as ssh:
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())  # idk
+            ssh.connect(self.host, username=self.user, pkey=key)
+            return [i.read().decode() for i in ssh.exec_command(command)[1:]]
 
-    def close(self):
-        self.connection.close()
-
+    def retrieve_file(self, file_path: str, save_path) -> None:
+        key = paramiko.Ed25519Key.from_private_key_file(self.key_path, self.pf)
+        with paramiko.SSHClient() as ssh:
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())  # idk
+            ssh.connect(self.host, username=self.user, pkey=key)
+            with ssh.open_sftp() as sftp:
+                sftp.get(file_path, save_path)
 
 
 class YadnexAPI:
@@ -79,30 +88,9 @@ class YadnexAPI:
         if YadnexAPI.handle_bad_request(vm_info):
             return vm_info.json()
 
-# # get network id
-# net_resp = requests.get('https://vpc.api.cloud.yandex.net/vpc/v1/networks',
-#                          params={'folderId': fold_id},
-#                          headers=headers12)
-# #print(net_resp.json())
-# net_id = ''
-#
-# # get network objects
-# #
-# # net_data = requests.get(f'https://vpc.api.cloud.yandex.net/vpc/v1/networks/{net_id}',
-# #                          headers=headers12)
-# # print(net_data.json())
-#
-# net_data = requests.get(f'https://vpc.api.cloud.yandex.net/vpc/v1/networks/{net_id}/subnets',
-#                          headers=headers12)
-# #print(json.dumps(net_data.json(), indent=4))
-# subnet_id = ''
-# subnet_used_addresses = requests.get(f'https://vpc.api.cloud.yandex.net/vpc/v1/subnets/{subnet_id}/addresses',
-#                          headers=headers12)
-# #print(json.dumps(subnet_used_addresses.json(), indent=4))
-
 
 # TODO safe secrets retrieving
-def parse_cloud_vms(org_name: str, cloud_name: str, folder_name: str):
+def parse_cloud_vms(org_name: str, cloud_name: str, folder_name: str) -> list[dict]:
     with open('', 'r', encoding='utf-8') as file:
         secrets = json.load(file)
 
@@ -144,31 +132,90 @@ def parse_cloud_vms(org_name: str, cloud_name: str, folder_name: str):
         print(f'No virtual machines in folder {folder_name}')
         return
 
-    vm_ips = list()
+    vm_ips = dict()
     for i in vms:
         data = yandex.get_virtual_machine_data_by_id(i['id'])
         # TODO what?
         for network_interface in data['networkInterfaces']:
             if 'address' in network_interface['primaryV4Address']['oneToOneNat'].keys():
-                vm_ips.append(network_interface['primaryV4Address']['oneToOneNat']['address'])
+                vm_ips[i['id']] = network_interface['primaryV4Address']['oneToOneNat']['address']
             else:
                 print(f"Machine's '{data['name']}' net interface with index '{network_interface['index']}'"
                       f" has no public ip to connect.\n\tVM status: '{data['status']}'\n\t"
                       f"Net interface subnet id: '{network_interface['subnetId']}'")
 
-def execute_commands_on_ip(ip: str, cred_path: str, commands: list[str]) -> list[str]:
-    with open(cred_path, 'r') as file:
-        creds = json.load(file)
-    console = SSHConsole(ip, creds['user'],
-                         creds['passphrase'],
-                         creds['path_to_ssh_key'])
-    for com in commands:
-        try:
-            t = console.execute_command(com)
-            print(t[1].read().decode())
-        except Exception as e:
-            print(e)
-        finally:
-            console.close()
+    servers = []
 
-#parse_cloud_vms('organization-piligrimvstheworld', 'cloud-piligrimvstheworld', 'default')
+    for i in vm_ips.keys():
+        for j in secrets['virtual_machines']:
+            if i == j['id']:
+                creds = {'pass': j['pass'], 'keys_paths': j['keys_paths']}
+                server = retrieve_audit_data(vm_ips[i], '', creds, i, 'placeholder')
+                # TODO add server header values
+                servers.append(server.copy())
+
+    return servers
+
+
+def execute_commands_on_server(console: SSHConsole, commands: list[str]):
+    output = []
+    try:
+        for com in commands:
+            output.append(tuple(console.execute_command(com)))
+    except Exception as e:
+        print(e)
+    finally:
+        return output
+
+
+def retrieve_file_on_server(console: SSHConsole, file_on_server: str, path_to_save: str) -> None:
+    try:
+        console.retrieve_file(file_on_server, path_to_save)
+    except Exception as e:
+        print(e)
+
+
+def retrieve_audit_data(ip: str, user: str, creds: dict, vm_id: int, vm_name: str) -> dict:
+    cmnds = ["./audit_script"]
+
+    console = SSHConsole(ip, user,
+                         creds['pass'],
+                         creds['keys_paths'])
+
+    output = execute_commands_on_server(console, cmnds)[0]
+    msgs = output[0].split('\n')
+    errs = output[1].split('\n')
+
+    if 'No net-tools package' in msgs:
+        print(f"No net-tools installed on machine {0} (id {0}). Leaving 'services' segment empty")
+    if 'No debsecan package' in msgs:
+        print(f"No debsecan installed on machine {0} (id {0}). Leaving 'vulns' segment empty")
+    for err in errs:
+        if 'ifconfig: command not found' in err:
+            print(f"No ifconfig installed on machine {0} (id {0}). Leaving 'ips' segment empty")
+    if 'Audit script finished' in msgs:
+        print(f"Audit script finished. Machine {0} ready to send files.")
+
+    retrieve_file_on_server(console, 'vulns.txt', 'saved/vulns.txt')
+    retrieve_file_on_server(console, 'ips.txt', 'saved/ips.txt')
+    retrieve_file_on_server(console, 'services.txt', 'saved/services.txt')
+    retrieve_file_on_server(console, 'packages.txt', 'saved/packages.txt')
+
+    server_obj = {}
+    with open('saved/ips.txt', 'r', encoding='utf-8') as file:
+        lines = file.readlines()
+        server_obj['ips'] = parse_ips(lines)
+    with open('saved/vulns.txt', 'r', encoding='utf-8') as file:
+        lines = file.readlines()
+        server_obj['vulns'] = parse_debsecan_vulns(lines)
+    with open('saved/services.txt', 'r', encoding='utf-8') as file:
+        lines = file.readlines()
+        server_obj['services'] = parse_services(lines)
+    with open('saved/packages.txt', 'r', encoding='utf-8') as file:
+        lines = file.readlines()
+        server_obj['packages'] = parse_packages(lines)
+
+    return server_obj
+
+
+parse_cloud_vms('', '', '')
