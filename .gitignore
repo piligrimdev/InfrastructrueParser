@@ -4,6 +4,7 @@
 /.idea
 *.html
 *.cfg
+*.pyc
 /__pycache__
 secrets.json
 key.txt

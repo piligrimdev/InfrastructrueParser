@@ -12,7 +12,8 @@ then
 echo "No net-tools package"
 else
 netstat -tulpn | cat > services.txt
-fi
 ifconfig | cat > ips.txt
+fi
 dpkg -l | cat > packages.txt
+hostnamectl | grep "Operating System" | cat > os.txt
 echo "Audit script finished"

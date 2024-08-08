@@ -1,21 +1,18 @@
 # -*- coding: utf-8 -*-
-import pathlib
-
 from bs4 import BeautifulSoup as BS
 import html
 import unicodedata
-import json
 import re
 
 
 class DrawIOParser:
-    def __init__(self, bs_obj: BS, figures_regocnition_template: dict):
+    def __init__(self, bs_obj: BS, figures_recognition_template: dict):
         self.html_tags_re = re.compile('<.*?>')
 
         self.figures_text_re \
             = re.compile(r"^([а-яА-ЯёЁ\w\-\_\@\s]+:\s*(([а-яА-ЯёЁ\w\-\_\@\s]+)|(\[([0-9]+,*)+\]))\s*;)+$")
         self.bs = bs_obj
-        self.template = figures_regocnition_template
+        self.template = figures_recognition_template
         self.figures_text = dict()  # dict for string values for each figure of each figure type
         self.result = dict()        # result dict for list for each figure of each figure type
         for key in self.template['figures_recognition'].keys():
@@ -32,7 +29,7 @@ class DrawIOParser:
     def _recognize_figures(self) -> dict:
         figures = self.bs.find_all('mxCell')
 
-        # retrive style parameters
+        # retrieve style parameters
         for figure in figures:
             if 'style' in figure.attrs.keys():
                 attrs = figure.attrs['style'].split(';')
@@ -89,11 +86,6 @@ class DrawIOParser:
         return self.result
 
 
-def read_json(file_path: pathlib.Path) -> dict:
-    with open(file_path, 'r', encoding='utf-8') as file:
-        return json.load(file)
-
-
 def write_to_result_json(data: dict, mapping_template: dict, segment_template: dict) -> None:
     for data_key in data.keys():
         record_list = list()
@@ -107,29 +99,3 @@ def write_to_result_json(data: dict, mapping_template: dict, segment_template: d
 
             record_list.append(record_template.copy())
         segment_template['segment'][0][data_key] = record_list.copy()
-
-
-def parse_drawio(drawio_path: pathlib.Path, parse_template_path: pathlib.Path,
-                 result_template_path: pathlib.Path) -> dict:
-
-    drawio_file = [x for x in drawio_path.iterdir() if x.name.endswith('.xml') or x.name.endswith('.drawio')]
-    if len(drawio_file) == 0:
-        print(f"No drawio file founded in '{drawio_path}'. Using segment template instead.")
-        return read_json(result_template_path)
-
-    with open(drawio_file[0], 'r', encoding='utf-8') as file:
-        bs = BS(file, 'xml')
-
-    parse_template = read_json(parse_template_path)
-
-    parser = DrawIOParser(bs, parse_template)
-    try:
-        result = parser.store_figure_values()
-    except ValueError as e:
-        print(e, 'Using Segment template as result', sep='\n')
-        result = {}
-
-    result_template = read_json(result_template_path)
-    write_to_result_json(result, parse_template['figures_text_mapping'], result_template)
-
-    return result_template

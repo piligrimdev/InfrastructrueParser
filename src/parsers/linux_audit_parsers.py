@@ -66,3 +66,14 @@ def parse_debsecan_vulns(v_lines: list[str]) -> list[dict]:
             if v_lines[index] == '\n':
                 flag = True
     return vulns
+
+
+def parse_os(os_lines: list[str]) -> dict:
+    result = dict()
+
+    for line in os_lines:
+        key_value = line.split(': ')
+        if key_value[0] == 'Operating System':
+            result['OS_name'] = key_value[1]
+
+    return result
