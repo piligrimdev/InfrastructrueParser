@@ -2,10 +2,12 @@
 /.venv/Lib
 /.venv/Scripts
 /.idea
+/.saved
+/__pycache__
+
 *.html
 *.cfg
 *.pyc
-/__pycache__
+
 secrets.json
 key.txt
-/saved

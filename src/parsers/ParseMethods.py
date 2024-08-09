@@ -8,7 +8,7 @@ from .drawIO_parser import *
 from .yandexCloud_parser import *
 
 
-# Logic of this method implies it need directories as input and not actual files/BS objects
+# Logic of this method implies it need directories as input and not actual files/data/BS objects e.t.c
 def parse_local_servers(input_dir: pathlib.Path, templates: dict) -> dict:
     result = dict()
     result['servers'] = []
@@ -58,10 +58,6 @@ def parse_local_servers(input_dir: pathlib.Path, templates: dict) -> dict:
 
 def parse_drawio(drawio_file: TextIO, parse_template: dict,
                  result_template: dict) -> dict:
-    # drawio_file = [x for x in drawio_path.iterdir() if x.name.endswith('.xml') or x.name.endswith('.drawio')]
-    # if len(drawio_file) == 0:
-    #     print(f"No drawio file founded in '{drawio_path}'. Using segment template instead.")
-    #     return result_template
 
     bs = BS(drawio_file, 'xml')
 
@@ -78,6 +74,12 @@ def parse_drawio(drawio_file: TextIO, parse_template: dict,
 
 
 def parse_yandex_cloud_vms(cloud_path: dict, credentials: dict) -> dict:
-    parser = YandexCloudParser(credentials['yandex_cloud']['oauth'])
-    vms_data = parser.get_virtual_machines_ips(cloud_path['org'], cloud_path['cloud'],  cloud_path['folder'])
-    return YandexCloudParser.get_yacloud_server_objects(vms_data, credentials['virtual_machines'])
+    result = dict()
+    try:
+        parser = YandexCloudParser(credentials['yandex_cloud']['oauth'])
+        vms_data = parser.get_virtual_machines_ips(cloud_path['org'], cloud_path['cloud'],  cloud_path['folder'])
+        result = parser.get_yacloud_server_objects(vms_data, credentials['virtual_machines'])
+    except Exception as e:
+        print(f"Error occured while parsing yandex cloud. Leaving servers empty.\n\tError: {e}")
+        result = {'servers': []}
+    return result

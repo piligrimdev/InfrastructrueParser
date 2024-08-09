@@ -6,9 +6,10 @@ from parsers.utils.general import *
 
 def main(input_dir: pathlib.Path, output_dir: pathlib.Path,
          servers_template_path: pathlib.Path, drawio_template_path: pathlib.Path,
-         result_template_path: pathlib.Path, yacloud_account_file_path: pathlib.Path=None,
-         vms_credentials: dict=None) -> None:
+         result_template_path: pathlib.Path, yacloud_account_file_path: pathlib.Path = None,
+         vms_credentials: dict = None) -> None:
 
+    # handle bad json file
     servers_template = read_json(servers_template_path)
     drawio_template = read_json(drawio_template_path)
     result_template = read_json(result_template_path)
@@ -24,13 +25,14 @@ def main(input_dir: pathlib.Path, output_dir: pathlib.Path,
             segment = parse_drawio(file, drawio_template, result_template)
 
     local_servers = parse_local_servers(input_dir, servers_template)
+
     if yacloud_account_file_path is not None:
+        # vms_credentials are required for yacloud parsing
         yacloud_servers = parse_yandex_cloud_vms(yacloud_account, vms_credentials)
     else:
         yacloud_servers = {'servers': []}
 
     servers = {'servers': local_servers['servers'] + yacloud_servers['servers']}
-    # todo fill virtual_segment
     segment['segment'][0]['servers'] = servers['servers']
 
     output_file = output_dir.joinpath('result.json')
@@ -59,7 +61,7 @@ if __name__ == '__main__':
     optional.add_argument('-yaCloudAcc', help='Path to json file with organization, cloud and folder data'
                                               'for accessing virtual machines on Yandex.Cloud.')
     optional.add_argument('-vmCredSrc', help='Way to get credentials for accessing virtual machines on '
-                                             'Yandex.Cloud. Choose from (json)', required=True)
+                                             'Yandex.Cloud. Choose from (json)')
     optional.add_argument('-vmCredJson', help='Path to json containing credentials for'
                                               ' accessing virtual machines on Yandex.Cloud.')
 

@@ -11,7 +11,25 @@ class SSHConsole:
         self.pf = pw
         self.key_path = p_key
 
+        # check if connection possible
+        self.ok = True
+        try:
+            key = paramiko.Ed25519Key.from_private_key_file(self.key_path, self.pf)
+        except Exception as e:
+            print(f"Problem with key to '{self.host}': {e}")
+            self.ok = False
+        if self.ok:
+            with paramiko.SSHClient() as ssh:
+                ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())  # idk
+                try:
+                    ssh.connect(self.host, username=self.user, pkey=key)
+                    ssh.exec_command("echo python logged in bitches!")
+                except Exception as e:
+                    print(f"Cant connect via ssh to {self.host}")
+                    self.ok = False
+
     def execute_command(self, command: str) -> list[str]:
+
         key = paramiko.Ed25519Key.from_private_key_file(self.key_path, self.pf)
         with paramiko.SSHClient() as ssh:
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())  # idk

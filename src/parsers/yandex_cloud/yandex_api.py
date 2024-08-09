@@ -5,10 +5,17 @@ import requests
 class YandexAPI:
     @staticmethod
     def handle_bad_request(resp: requests.Response) -> bool:
-        if resp.status_code == 200:
+        if resp.ok:
             return True
         else:
             raise Exception(f'Something went wrong with {resp.request.url} request.\n {resp.reason}')
+
+    def handle_request_exception(self, url: str, json: dict) -> requests.Response | None:
+        try:
+            resp = self._session.get(url, headers=self.headers, params=json)
+            return resp
+        except Exception as e:
+            raise Exception(f'Something went wrong with {url} request connection .\n {e}')
 
     def __init__(self, oauth: str):
         # Getting iam
@@ -25,37 +32,31 @@ class YandexAPI:
 
     def get_all_organizations_list(self) -> list:
         # TODO pagination to get all orgs
-        org_resp = self._session.get(
-            'https://organization-manager.api.cloud.yandex.net/organization-manager/v1/organizations',
-            headers=self.headers)
+        org_resp = self.handle_request_exception('https://organization-manager.api.cloud.yandex.net/organization-manager/v1/organizations', {})
         if YandexAPI.handle_bad_request(org_resp):
-            # TODO
             return org_resp.json()['organizations']
 
     def get_clouds_by_org_id(self, org_id: int) -> list:
-        cloud_resp = requests.get('https://resource-manager.api.cloud.yandex.net/resource-manager/v1/clouds',
-                                  params={'organizationId': org_id},
-                                  headers=self.headers)
+        cloud_resp = self.handle_request_exception('https://resource-manager.api.cloud.yandex.net/resource-manager/v1/clouds',
+                                      {'organizationId': org_id})
         if YandexAPI.handle_bad_request(cloud_resp):
             return cloud_resp.json()['clouds']
 
     def get_folders_by_cloud_id(self, cloud_id: int) -> list:
-        fold_resp = requests.get('https://resource-manager.api.cloud.yandex.net/resource-manager/v1/folders',
-                                 params={'cloudId': cloud_id},
-                                 headers=self.headers)
+        fold_resp = self.handle_request_exception('https://resource-manager.api.cloud.yandex.net/resource-manager/v1/folders',
+                                      {'cloudId': cloud_id})
         if YandexAPI.handle_bad_request(fold_resp):
             return fold_resp.json()['folders']
 
     def get_virtual_machines_list_by_folder_id(self, folder_id) -> list:
-        vm_list = requests.get(f'https://compute.api.cloud.yandex.net/compute/v1/instances',
-                               params={'folderId': folder_id},
-                               headers=self.headers)
+        vm_list = self.handle_request_exception(f'https://compute.api.cloud.yandex.net/compute/v1/instances',
+                                      {'folderId': folder_id})
         if YandexAPI.handle_bad_request(vm_list):
             return vm_list.json()['instances']
 
     def get_virtual_machine_data_by_id(self, vm_id) -> dict:
-        vm_info = requests.get(f'https://compute.api.cloud.yandex.net/compute/v1/instances/{vm_id}',
-                               headers=self.headers)
+        vm_info = self.handle_request_exception(f'https://compute.api.cloud.yandex.net/compute/v1/instances/{vm_id}',
+                                      {})
         if YandexAPI.handle_bad_request(vm_info):
             return vm_info.json()
 
