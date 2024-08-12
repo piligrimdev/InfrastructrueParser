@@ -77,54 +77,57 @@ class YandexCloudParser:
         servers = {'servers': []}
 
         for vm_id in vms_data.keys():
+            server = self.server_placeholder.copy()
+            server['id'] = vm_id
+            server['name'] = vms_data[vm_id]['name']
+            server['tag'] = ''
+            flag = False
             if vms_data[vm_id]['ip'] == '':
-                servers['servers'].append(self.server_placeholder.copy())
+                servers['servers'].append(server)
                 continue
-            server = {}
             for secret in secrets:
                 if vm_id == secret['id']:
                     creds = {'pass': secret['pass'], 'keys_paths': secret['keys_paths']}
 
-                    server = (self._retrieve_audit_data(vms_data[vm_id]['ip'],
-                                                        secret['user'], creds, vm_id,
-                                                        vms_data[vm_id]['name']))
+                    self._retrieve_audit_data(vms_data[vm_id]['ip'],
+                                              secret['user'], creds, server)
+                    flag = True
                     break
-            if len(server) == 0:
+            if not flag:
                 print(f"No secret data for machine with id '{vm_id}'.")
-                server = self.server_placeholder.copy()
             servers['servers'].append(server.copy())
 
         return servers
 
-    def _retrieve_audit_data(self, ip: str, user: str, creds: dict, vm_id: int, vm_name: str) -> dict:
+    def _retrieve_audit_data(self, ip: str, user: str, creds: dict, init_server: dict) -> None:
         commands = ["./audit_script"]
 
         console = SSHConsole(ip, user,
                              creds['pass'],
                              creds['keys_paths'])
         if not console.ok:
-            return self.server_placeholder.copy()
+            return None
 
         output = execute_commands_on_server(console, commands)[0]
         msgs = output[0].split('\n')
         errs = output[1].split('\n')
 
         if 'No net-tools package' in msgs:
-            print(f"No net-tools installed on machine {vm_name} (id {vm_id}). Leaving 'services' segment empty")
+            print(f"No net-tools installed on machine {init_server['name']} (id {init_server['id']}). Leaving 'services' segment empty")
         if 'No debsecan package' in msgs:
-            print(f"No debsecan installed on machine {vm_name} (id {vm_id}). Leaving 'vulns' segment empty")
+            print(f"No debsecan installed on machine {init_server['name']} (id {init_server['id']}). Leaving 'vulns' segment empty")
 
         for err in errs:
             if 'ifconfig: command not found' in err:
-                print(f"No ifconfig installed on machine {vm_name} (id {vm_id}). Leaving 'ips' segment empty")
+                print(f"No ifconfig installed on machine {init_server['name']} (id {init_server['id']}). Leaving 'ips' segment empty")
             elif 'audit_script: No such file or directory' in err:
-                print(f"No audit script on machine {vm_name} (id {vm_id}). Leaving server object empty")
-                return self.server_placeholder.copy()
+                print(f"No audit script on machine {init_server['name']} (id {init_server['id']}). Leaving server object empty")
+                return None
             elif err != '':
-                print(f"Error on  {vm_name} (id {vm_id}): {err}")
+                print(f"Error on {init_server['name']} (id {init_server['id']}): {err}")
 
         if 'Audit script finished' in msgs:
-            print(f"Audit script finished. Machine {vm_name} (id {vm_id}) ready to send files.")
+            print(f"Audit script finished. Machine {init_server['name']} (id {init_server['id']}) ready to send files.")
 
         saved_path = pathlib.Path(os.getcwd()).joinpath(".saved/")
         if not saved_path.exists():
@@ -144,9 +147,7 @@ class YandexCloudParser:
 
         # os is exception bcs has header values
         with open('.saved/os.txt', 'r', encoding='utf-8') as file:
-            server = lin_audit_parser.parse('os', file.readlines())[0]
-            server['name'] = vm_name
-            server['id'] = vm_id
+            init_server['OS_name'] = lin_audit_parser.parse('os', file.readlines())[0]['OS_name']
 
         for obj in data_objs:
             with open(f".saved/{obj}.txt", 'r', encoding='utf-8') as file:
@@ -154,11 +155,9 @@ class YandexCloudParser:
                     continue
                 try:
                     parser_data = lin_audit_parser.parse(obj, file.readlines())
-                    server[obj] = parser_data
+                    init_server[obj] = parser_data
                 except Exception:
-                    print(f"Error while parsing '{obj}.txt'. Leaving '{obj}' empty for machine '{vm_id}'")
-                    server[obj] = []
+                    print(f"Error while parsing '{obj}.txt'. Leaving '{obj}' empty for machine '{init_server['id']}'")
+                    init_server[obj] = []
 
         [os.remove(x) for x in saved_path.iterdir()]
-
-        return server

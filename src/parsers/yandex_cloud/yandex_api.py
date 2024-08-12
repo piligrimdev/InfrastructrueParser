@@ -18,17 +18,17 @@ class YandexAPI:
             raise Exception(f'Something went wrong with {url} request connection .\n {e}')
 
     def __init__(self, oauth: str):
-        # Getting iam
         self._oauth = oauth
         self._session = requests.session()
+        self.headers = {}
+        # Getting iam
         iam_resp = self._session.post('https://iam.api.cloud.yandex.net/iam/v1/tokens'
                                       , json={'yandexPassportOauthToken': self._oauth})
+
         if YandexAPI.handle_bad_request(iam_resp):
             self._iam = iam_resp.json()['iamToken']
 
-        self.headers = {
-            'Authorization': f"Bearer {self._iam}"
-        }
+        self.headers['Authorization'] = f"Bearer {self._iam}"
 
     def get_all_organizations_list(self) -> list:
         # TODO pagination to get all orgs
