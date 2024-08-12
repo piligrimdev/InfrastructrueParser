@@ -83,3 +83,8 @@ def parse_yandex_cloud_vms(cloud_path: dict, credentials: dict) -> dict:
         print(f"Error occured while parsing yandex cloud. Leaving servers empty.\n\tError: {e}")
         result = {'servers': []}
     return result
+
+
+def parse_yandex_cloud_entities(cloud_path: dict, credentials: dict) -> dict:
+    parser = YandexCloudParser(credentials['yandex_cloud']['oauth'])
+    return parser.get_cloud_entities(cloud_path['org'], cloud_path['cloud'],  cloud_path['folder'])

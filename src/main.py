@@ -28,12 +28,15 @@ def main(input_dir: pathlib.Path, output_dir: pathlib.Path,
 
     if yacloud_account_file_path is not None:
         # vms_credentials are required for yacloud parsing
-        yacloud_servers = parse_yandex_cloud_vms(yacloud_account, vms_credentials)
+        # yacloud_servers = parse_yandex_cloud_vms(yacloud_account, vms_credentials)
+        ya_ent = parse_yandex_cloud_entities(yacloud_account, vms_credentials)
     else:
-        yacloud_servers = {'servers': []}
+        # yacloud_servers = {'servers': []}
+        ya_ent = {}
 
-    servers = {'servers': local_servers['servers'] + yacloud_servers['servers']}
-    segment['segment'][0]['servers'] = servers['servers']
+    #servers = {'servers': local_servers['servers'] + yacloud_servers['servers']}
+    segment['segment'][0]['servers'] = local_servers['servers']
+    segment['yacloud'] = ya_ent
 
     output_file = output_dir.joinpath('result.json')
     with open(output_file.absolute(), 'w', encoding='utf-8') as file:

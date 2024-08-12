@@ -14,7 +14,7 @@ class YandexCloudParser:
             "vulns": [], "ips": [], "services": [], "packages": []
         }
 
-    def get_virtual_machines_ips(self, org_name: str, cloud_name: str, folder_name: str) -> dict:
+    def get_folder_id(self, org_name, cloud_name, folder_name):
         # Getting access to net data
 
         orgs = self.api.get_all_organizations_list()
@@ -46,6 +46,38 @@ class YandexCloudParser:
 
         if folder_id == '':
             raise Exception(f'No folder with name {folder_name}')
+        return folder_id
+
+    def get_cloud_entities(self, org_name, cloud_name, folder_name):
+        folder_id = self.get_folder_id(org_name, cloud_name, folder_name)
+        virtual_machines = self.api.get_virtual_machines_list_by_folder_id(folder_id)
+        kub_clusters = self.api.get_kubernets_clusters_by_folder_id(folder_id)
+        dns_zones = self.api.get_dns_zones_by_folder_id(folder_id)
+        lbs = self.api.get_loadbalancer_data_by_folder_id(folder_id)
+        buckets = self.api.get_storage_buckets_by_folder_id(folder_id)
+
+        db_list = ['postgresql', 'redis', 'mongodb']
+        dbs = {}
+        for i in db_list:
+            dbs[i] = {}
+            clusters = self.api.get_db_clusters_by_folder_id(folder_id, i)
+            for cluster in clusters:
+                dbs[i][cluster] = self.api.get_dbs_by_cluster_id(cluster['id'], i)
+
+        result = {
+            'vms': virtual_machines,
+            'k8s_clusters': kub_clusters,
+            'dns_zones': dns_zones,
+            'loadbalancers': lbs,
+            'storage_buckets': buckets,
+            'databases': dbs
+        }
+
+        return result
+
+    def get_virtual_machines_ips(self, org_name: str, cloud_name: str, folder_name: str) -> dict:
+        # Getting access to net data
+        folder_id = self.get_folder_id(org_name, cloud_name, folder_name)
 
         # Get virtual machines list
         v_machines = self.api.get_virtual_machines_list_by_folder_id(folder_id)
