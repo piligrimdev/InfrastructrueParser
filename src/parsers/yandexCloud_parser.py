@@ -149,9 +149,7 @@ class YandexCloudParser:
                 continue
             for secret in secrets:
                 if vm_id == secret['id']:
-                    creds = {'pass': secret['pass'], 'keys_paths': secret['keys_paths']}
-
-                    YandexCloudParser._retrieve_audit_data(vms_data[vm_id]['ip'], creds, server)
+                    YandexCloudParser._retrieve_audit_data(vms_data[vm_id]['ip'], secret, server)
                     flag = True
                     break
             if not flag:
