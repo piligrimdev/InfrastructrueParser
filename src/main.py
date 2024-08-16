@@ -10,12 +10,9 @@ def main(input_dir: pathlib.Path, output_dir: pathlib.Path,
          vms_credentials: dict = None) -> None:
 
     # handle bad json file
-    servers_template = read_json(servers_template_path)
-    drawio_template = read_json(drawio_template_path)
     result_template = read_json(result_template_path)
-    if yacloud_account_file_path is not None:
-        yacloud_account = read_json(yacloud_account_file_path)
 
+    drawio_template = read_json(drawio_template_path)
     drawio_file = [x for x in input_dir.iterdir() if x.name.endswith('.xml') or x.name.endswith('.drawio')]
     if len(drawio_file) == 0:
         print(f"No drawio file founded in '{input_dir}'. Using segment template instead.")
@@ -24,19 +21,22 @@ def main(input_dir: pathlib.Path, output_dir: pathlib.Path,
         with open(drawio_file[0], 'r', encoding='utf-8') as file:
             segment = parse_drawio(file, drawio_template, result_template)
 
+    servers_template = read_json(servers_template_path)
     local_servers = parse_local_servers(input_dir, servers_template)
 
     if yacloud_account_file_path is not None:
-        # vms_credentials are required for yacloud parsing
-        # yacloud_servers = parse_yandex_cloud_vms(yacloud_account, vms_credentials)
-        ya_ent = parse_yandex_cloud_entities(yacloud_account, vms_credentials)
+        yacloud_account = read_json(yacloud_account_file_path)
+        if vms_credentials is not None: # vms_credentials are required for yacloud parsing
+            yacloud_servers = parse_yandex_cloud_vms(yacloud_account, vms_credentials)
+        else:
+            yacloud_servers = {'servers': []}
+        yacloud_objects = parse_yandex_cloud_entities(yacloud_account)
     else:
-        # yacloud_servers = {'servers': []}
-        ya_ent = {}
+        yacloud_servers = {'servers': []}
+        yacloud_objects = {}
 
-    #servers = {'servers': local_servers['servers'] + yacloud_servers['servers']}
-    segment['segment'][0]['servers'] = local_servers['servers']
-    segment['yacloud'] = ya_ent
+    segment['segment'][0]['servers'] = {'servers': local_servers['servers'] + yacloud_servers['servers']}
+    segment['yacloud'] = yacloud_objects
 
     output_file = output_dir.joinpath('result.json')
     with open(output_file.absolute(), 'w', encoding='utf-8') as file:
@@ -95,11 +95,10 @@ if __name__ == '__main__':
                 else:  # if no json path provided - quit
                     print('If vmCredSrc=json you should provide path to json with key -vmCredJson')
                     quit()
-            elif vmCredSrc == 'None':  # if cloud data provided but no way provided - quit()
-                print('No -vmCredSrc provided to scan virtual machines on Yandex cloud.')
-                quit()
+            elif vmCredSrc == 'None':
+                pass
             else:
-                print('Invalid choice for -vmCredSrc')
+                print('No -vmCredSrc provided to scan virtual machines on Yandex cloud.')
                 quit()
 
     if args.outDir is not None:

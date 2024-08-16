@@ -79,15 +79,13 @@ class YandexAPI:
 
     def get_storage_buckets_by_folder_id(self, folder_id: str) -> list:
         return self._get_all_list_objects(f'https://storage.api.cloud.yandex.net/storage/v1/buckets',
-                                          {'folderId': folder_id, 'pageSize': 1000}, 'buckets')
+                                          {'folderId': folder_id}, 'buckets')
 
     def _get_all_list_objects(self, url: str, params: dict,
                               list_name: str, page_token: str = None) -> list:
         if page_token is not None:
             params['page_token'] = page_token
-            list_part = self.handle_request_exception(url, params)
-        else:
-            list_part = self.handle_request_exception(url, params)
+        list_part = self.handle_request_exception(url, params)
 
         try:
             YandexAPI.handle_bad_request(list_part)
@@ -101,7 +99,6 @@ class YandexAPI:
         if len(js) == 0:
             return []
         return js[list_name]
-
 
     def __del__(self):
         self._session.close()

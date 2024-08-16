@@ -74,10 +74,10 @@ def parse_drawio(drawio_file: TextIO, parse_template: dict,
 
 
 def parse_yandex_cloud_vms(cloud_path: dict, credentials: dict) -> dict:
-    result = dict()
     try:
-        parser = YandexCloudParser(credentials['yandex_cloud']['oauth'])
-        vms_data = parser.get_virtual_machines_ips(cloud_path['org'], cloud_path['cloud'],  cloud_path['folder'])
+        parser = YandexCloudParser(cloud_path['oauth'])
+        folder_id = parser.get_folder_id(cloud_path['org'], cloud_path['cloud'],  cloud_path['folder'])
+        vms_data = parser.get_virtual_machines_ips(folder_id)
         result = parser.get_yacloud_server_objects(vms_data, credentials['virtual_machines'])
     except Exception as e:
         print(f"Error occured while parsing yandex cloud. Leaving servers empty.\n\tError: {e}")
@@ -85,6 +85,7 @@ def parse_yandex_cloud_vms(cloud_path: dict, credentials: dict) -> dict:
     return result
 
 
-def parse_yandex_cloud_entities(cloud_path: dict, credentials: dict) -> dict:
-    parser = YandexCloudParser(credentials['yandex_cloud']['oauth'])
-    return parser.get_cloud_entities(cloud_path['org'], cloud_path['cloud'],  cloud_path['folder'])
+def parse_yandex_cloud_entities(cloud_path: dict) -> dict:
+    parser = YandexCloudParser(cloud_path['oauth'])
+    folder_id = parser.get_folder_id(cloud_path['org'], cloud_path['cloud'],  cloud_path['folder'])
+    return parser.get_cloud_objects(folder_id)
