@@ -7,7 +7,7 @@ from parsers.utils.general import *
 def main(input_dir: pathlib.Path, output_dir: pathlib.Path,
          servers_template_path: pathlib.Path, drawio_template_path: pathlib.Path,
          result_template_path: pathlib.Path, yacloud_account_file_path: pathlib.Path = None,
-         vms_credentials: dict = None) -> None:
+         vms_credentials: dict = None, vmware_creds: dict = None) -> None:
 
     # handle bad json file
     result_template = read_json(result_template_path)
@@ -35,8 +35,14 @@ def main(input_dir: pathlib.Path, output_dir: pathlib.Path,
         yacloud_servers = {'servers': []}
         yacloud_objects = {}
 
+    if vmware_creds is not None:
+        vmware_objects = parse_vmware_cloud_director_entities(vmware_creds, vmware_creds['vcd'])
+    else:
+        vmware_objects = {}
+
     segment['segment'][0]['servers'] = {'servers': local_servers['servers'] + yacloud_servers['servers']}
     segment['yacloud'] = yacloud_objects
+    segment['vmware_cloud_director'] = vmware_objects
 
     output_file = output_dir.joinpath('result.json')
     with open(output_file.absolute(), 'w', encoding='utf-8') as file:
@@ -61,12 +67,15 @@ if __name__ == '__main__':
     optional.add_argument('-drawio-template', help='Path to drawio parsing template (.json)')
     optional.add_argument('-result-template', help='Path to result template (.json)')
 
-    optional.add_argument('-yaCloudAcc', help='Path to json file with organization, cloud and folder data'
+    optional.add_argument('-yaCloudAcc', help='Path to json file with oauth token organization, cloud and folder data'
                                               'for accessing virtual machines on Yandex.Cloud.')
     optional.add_argument('-vmCredSrc', help='Way to get credentials for accessing virtual machines on '
                                              'Yandex.Cloud. Choose from (json)')
     optional.add_argument('-vmCredJson', help='Path to json containing credentials for'
                                               ' accessing virtual machines on Yandex.Cloud.')
+
+    optional.add_argument('-vmWareCloudAcc', help='Path to json file with host url, username, password'
+                                                  'and tenant name for accessing VMWare Cloud Director API.')
 
     args = arg_parser.parse_args()
 
@@ -101,6 +110,16 @@ if __name__ == '__main__':
                 print('No -vmCredSrc provided to scan virtual machines on Yandex cloud.')
                 quit()
 
+    vmware_acc = args.vmWareCloudAcc
+    vmware_creds = None
+    if vmware_acc is not None:
+        vmware_path = pathlib.Path(vmware_acc)
+        if vmware_path.exists():
+            with open(vmware_path, 'r', encoding='utf-8') as file:
+                vmware_creds = json.load(file)
+        else:
+            print('Invalid vmWareCloudAcc path')
+
     if args.outDir is not None:
         outputDir = pathlib.Path(args.outDir)
     else:
@@ -133,4 +152,5 @@ if __name__ == '__main__':
         print("Ivalid result template file path")
         quit()
 
-    main(inputDir, outputDir, servers_template, drawio_template, result_template, ya_cloud_acc_path, vmCreds)
+    main(inputDir, outputDir, servers_template, drawio_template, result_template, ya_cloud_acc_path, vmCreds,
+         vmware_creds)

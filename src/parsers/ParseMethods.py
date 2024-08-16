@@ -6,6 +6,7 @@ from .winaudit_parser import *
 from .scanOVAL_parser import *
 from .drawIO_parser import *
 from .yandexCloud_parser import *
+from .vmware_cloud_director_parser import *
 
 
 # Logic of this method implies it need directories as input and not actual files/data/BS objects e.t.c
@@ -73,19 +74,25 @@ def parse_drawio(drawio_file: TextIO, parse_template: dict,
     return result_template
 
 
-def parse_yandex_cloud_vms(cloud_path: dict, credentials: dict) -> dict:
+def parse_yandex_cloud_vms(cloud_creds: dict, vm_credentials: dict) -> dict:
     try:
-        parser = YandexCloudParser(cloud_path['oauth'])
-        folder_id = parser.get_folder_id(cloud_path['org'], cloud_path['cloud'],  cloud_path['folder'])
+        parser = YandexCloudParser(cloud_creds['oauth'])
+        folder_id = parser.get_folder_id(cloud_creds['org'], cloud_creds['cloud'],  cloud_creds['folder'])
         vms_data = parser.get_virtual_machines_ips(folder_id)
-        result = parser.get_yacloud_server_objects(vms_data, credentials['virtual_machines'])
+        result = parser.get_yacloud_server_objects(vms_data, vm_credentials['virtual_machines'])
     except Exception as e:
         print(f"Error occured while parsing yandex cloud. Leaving servers empty.\n\tError: {e}")
         result = {'servers': []}
     return result
 
 
-def parse_yandex_cloud_entities(cloud_path: dict) -> dict:
-    parser = YandexCloudParser(cloud_path['oauth'])
-    folder_id = parser.get_folder_id(cloud_path['org'], cloud_path['cloud'],  cloud_path['folder'])
+def parse_yandex_cloud_entities(cloud_creds: dict) -> dict:
+    parser = YandexCloudParser(cloud_creds['oauth'])
+    folder_id = parser.get_folder_id(cloud_creds['org'], cloud_creds['cloud'],  cloud_creds['folder'])
     return parser.get_cloud_objects(folder_id)
+
+
+def parse_vmware_cloud_director_entities(cloud_creds: dict, vcd_name: str) -> dict:
+    parser = VMWareCloudDirectorAPI(cloud_creds)
+    vcd = get_vmware_vdc_by_name(parser, vcd_name)
+    return parse_vmware_vdc(parser, vcd)
