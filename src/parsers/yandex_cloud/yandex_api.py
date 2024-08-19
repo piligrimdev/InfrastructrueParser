@@ -6,7 +6,7 @@ class YandexAPI:
     @staticmethod
     def handle_bad_request(resp: requests.Response) -> bool:
         if not resp.ok:
-            raise Exception(f'Something went wrong with {resp.request.url} request.\n {resp.reason}')
+            raise Exception(f'Something went wrong with {resp.request.url} request.\nReason: {resp.reason}')
         return True
 
     def handle_request_exception(self, url: str, json: dict) -> requests.Response | None:

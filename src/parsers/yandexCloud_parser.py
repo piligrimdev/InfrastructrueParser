@@ -70,21 +70,28 @@ class YandexCloudParser:
         """
 
         virtual_machines = self.api.get_virtual_machines_list_by_folder_id(folder_id)
+        print("Retrieved virtual machines data")
         kub_clusters = self.api.get_kubernets_clusters_by_folder_id(folder_id)
+        print("Retrieved kubernets clusters data")
         dns_zones = self.api.get_dns_zones_by_folder_id(folder_id)
+        print("Retrieved DNS zones data")
         lbs = self.api.get_loadbalancer_data_by_folder_id(folder_id)
+        print("Retrieved loadbalancers data")
         buckets = self.api.get_storage_buckets_by_folder_id(folder_id)
+        print("Retrieved storage buckets data")
 
         db_list = ['postgresql', 'redis', 'mongodb',
                    'clickhouse', 'elasticsearch', 'greenplum',
                    'kafka', 'mysql', 'opensearch', 'sqlserver']
 
-        dbs = {}
+        db_clusters = {}
         for i in db_list:
-            dbs[i] = {}
+            db_clusters[i] = {}
             clusters = self.api.get_db_clusters_by_folder_id(folder_id, i)
             for cluster in clusters:
-                dbs[i][cluster] = self.api.get_dbs_by_cluster_id(cluster['id'], i)
+                db_clusters[i][cluster['id']] = cluster
+                db_clusters[i][cluster['id']]['databases'] = self.api.get_dbs_by_cluster_id(cluster['id'], i)
+                print(f"Retrieved {i} database data")
 
         result = {
             'vms': virtual_machines,
@@ -92,7 +99,7 @@ class YandexCloudParser:
             'dns_zones': dns_zones,
             'loadbalancers': lbs,
             'storage_buckets': buckets,
-            'databases': dbs
+            'database_clusters': db_clusters
         }
 
         return result
@@ -149,6 +156,7 @@ class YandexCloudParser:
                 continue
             for secret in secrets:
                 if vm_id == secret['id']:
+                    print(f"Parsing virtual machine {vms_data[vm_id]['name']} (id {vm_id})")
                     YandexCloudParser._retrieve_audit_data(vms_data[vm_id]['ip'], secret, server)
                     flag = True
                     break
@@ -197,7 +205,8 @@ class YandexCloudParser:
                 print(f"Error on {server_object['name']} (id {server_object['id']}): {err}")
 
         if 'Audit script finished' in msgs:
-            print(f"Audit script finished. Machine {server_object['name']} (id {server_object['id']}) ready to send files.")
+            print(f"Audit script finished. Machine {server_object['name']} (id {server_object['id']})"
+                  f" ready to send files.")
 
         # 3) Saving audit files
         saved_path = pathlib.Path(os.getcwd()).joinpath(".saved/")
@@ -226,6 +235,7 @@ class YandexCloudParser:
                 if obj == 'os':
                     continue
                 try:
+                    print(f"Parsing file '{obj}.txt'")
                     parser_data = lin_audit_parser.parse(obj, file.readlines())
                     server_object[obj] = parser_data
                 except Exception:

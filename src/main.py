@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 import argparse
+import sys
+from parsers.utils.format_output import AutoIndent
 from parsers.ParseMethods import *
 from parsers.utils.general import *
 
@@ -12,6 +14,7 @@ def main(input_dir: pathlib.Path, output_dir: pathlib.Path,
     # handle bad json file
     result_template = read_json(result_template_path)
 
+    print('-' * 40)
     drawio_template = read_json(drawio_template_path)
     drawio_file = [x for x in input_dir.iterdir() if x.name.endswith('.xml') or x.name.endswith('.drawio')]
     if len(drawio_file) == 0:
@@ -21,9 +24,11 @@ def main(input_dir: pathlib.Path, output_dir: pathlib.Path,
         with open(drawio_file[0], 'r', encoding='utf-8') as file:
             segment = parse_drawio(file, drawio_template, result_template)
 
+    print('-' * 40)
     servers_template = read_json(servers_template_path)
     local_servers = parse_local_servers(input_dir, servers_template)
 
+    print('-' * 40)
     if yacloud_account_file_path is not None:
         yacloud_account = read_json(yacloud_account_file_path)
         if vms_credentials is not None: # vms_credentials are required for yacloud parsing
@@ -35,6 +40,7 @@ def main(input_dir: pathlib.Path, output_dir: pathlib.Path,
         yacloud_servers = {'servers': []}
         yacloud_objects = {}
 
+    print('-' * 40)
     if vmware_creds is not None:
         vmware_objects = parse_vmware_cloud_director_entities(vmware_creds, vmware_creds['vcd'])
     else:
@@ -44,6 +50,7 @@ def main(input_dir: pathlib.Path, output_dir: pathlib.Path,
     segment['yacloud'] = yacloud_objects
     segment['vmware_cloud_director'] = vmware_objects
 
+    print('-' * 40)
     output_file = output_dir.joinpath('result.json')
     with open(output_file.absolute(), 'w', encoding='utf-8') as file:
         json.dump(segment, file, ensure_ascii=False, indent=4)
@@ -51,13 +58,14 @@ def main(input_dir: pathlib.Path, output_dir: pathlib.Path,
 
 
 if __name__ == '__main__':
+    sys.stdout = AutoIndent(sys.stdout)
     arg_parser = argparse.ArgumentParser('WinAudit parser')
 
     required = arg_parser.add_argument_group('required arguments')
     optional = arg_parser.add_argument_group('optional arguments')
 
     required.add_argument('-inDir', help='Path to directory containing drawio .xml file '
-                                         'and directoires with winaudit'
+                                         'and directories with winaudit'
                                          ' and scanoval .html files', required=True)
 
     # todo add vms data arguments
@@ -81,7 +89,7 @@ if __name__ == '__main__':
 
     inputDir = pathlib.Path(args.inDir)
     if not inputDir.exists():
-        print("Ivalid input dir path")
+        print("Invalid input dir path")
         quit()
 
     # long validation of virtual machines arguments
@@ -125,7 +133,7 @@ if __name__ == '__main__':
     else:
         outputDir = inputDir
     if not inputDir.exists():
-        print("Ivalid output dir path")
+        print("Invalid output dir path")
         quit()
 
     if args.servers_template is None:
@@ -133,7 +141,7 @@ if __name__ == '__main__':
     else:
         servers_template = pathlib.Path(args.servers_template)
     if not servers_template.exists() or not servers_template.is_file():
-        print("Ivalid servers template file path")
+        print("Invalid servers template file path")
         quit()
 
     if args.drawio_template is None:
@@ -141,7 +149,7 @@ if __name__ == '__main__':
     else:
         drawio_template = pathlib.Path(args.drawio_template)
     if not drawio_template.exists() or not drawio_template.is_file():
-        print("Ivalid drawio template file path")
+        print("Invalid drawio template file path")
         quit()
 
     if args.result_template is None:
@@ -149,7 +157,7 @@ if __name__ == '__main__':
     else:
         result_template = pathlib.Path(args.result_template)
     if not result_template.exists() or not result_template.is_file():
-        print("Ivalid result template file path")
+        print("Invalid result template file path")
         quit()
 
     main(inputDir, outputDir, servers_template, drawio_template, result_template, ya_cloud_acc_path, vmCreds,
