@@ -30,29 +30,32 @@ ___
 ## Keys usage
 
 ```
-usage: WinAudit parser [-h] -inDir INDIR [-outDir OUTDIR] [-servers-template SERVERS_TEMPLATE]
-                       [-drawio-template DRAWIO_TEMPLATE] [-result-template RESULT_TEMPLATE]
+usage:  WinAudit parser [-h] -inDir INDIR [-outDir OUTDIR] [-servers-template SERVERS_TEMPLATE]
+        [-drawio-template DRAWIO_TEMPLATE] [-result-template RESULT_TEMPLATE]
+        [-creds CREDS] [-yaCloudEnt] [-yaCloudVM] [-vmWareEnt] [-uploadNB]
 
-options:
-  -h, --help            show this help message and exit
+      options:
+        -h, --help            show this help message and exit
 
-required arguments:
-  -inDir INDIR          Path to directory containing drawio .xml file and directoires with winaudit and scanoval .html
-                        files
+      required arguments:
+        -inDir INDIR          Path to directory containing drawio .xml file and directories with winaudit and scanoval .html files
 
-optional arguments:
-  -outDir OUTDIR        Path to output directory for resulting .json file
-  
-  -servers-template SERVERS_TEMPLATE
-                        Path to servers parsing template (.json)
-                        
-  -drawio-template DRAWIO_TEMPLATE
-                        Path to drawio parsing template (.json)
-                        
-  -result-template RESULT_TEMPLATE
-                        Path to result template (.json)
+      optional arguments:
+        -outDir OUTDIR        Path to output directory for resulting .json file
+        -servers-template SERVERS_TEMPLATE
+                              Path to servers parsing template (.json)
+        -drawio-template DRAWIO_TEMPLATE
+                              Path to drawio parsing template (.json)
+        -result-template RESULT_TEMPLATE
+                              Path to result template (.json)
+        -creds CREDS          Path to json file with credentials for Yandex Cloud, VMware Cloud Director and YaCloud Virtual machines.
+        -yaCloudEnt           Enter this key to retrieve Yandex Cloud entities.
+        -yaCloudVM            Enter this key to retrieve Yandex Cloud Virtual Machines audit data.
+        -vmWareEnt            Enter this key to retrieve VMWare Cloud Director entities.
+        -uploadNB             Enter this key to upload resulting segment to NetBox
 ```
 ___
+
 ## Templates usage
 
 ### Servers template structure example
@@ -199,7 +202,7 @@ In  `"figures_text_mapping"` objects:
     ```
 
 ### Drawio file structure
-**Data in shapes should match following regular expression:** 
+**Data/text in shapes should match following regular expression:** 
 ```
 ^([а-яА-ЯёЁ\w\-\_\@\s]+:\s*(([а-яА-ЯёЁ\w\-\_\@\s]+)|(\[([0-9]+,*)+\]))\s*;)+$
 ```
@@ -210,11 +213,258 @@ key: value;
 other key: other_value;
 ```
 
-May contain list of numeric values (`"id"`'s of servers for `"hardware"` objects) 
+May contain list of numeric values (e.g., `"id"`'s of servers for `"hardware"` objects) 
 ```
 servers: [1,2,3];
 ```
 
-### Result file structure
+### Credentials template
 
-*To be completed*
+```json
+{
+    "yacloud":{
+        "key_data_path": "<full_path_to_authorized-key_data_json>",
+        "org": "org-name",
+        "cloud": "cloud-name",
+        "folder": "folder-name"
+      },
+      "vmware": {
+        "user": "username",
+        "password": "password",
+        "org": "org-name",
+        "host": "https://<address_of_vmware_cloud>/",
+        "vdc": "vdc-name"
+      },
+      "virtual_machines": [
+            {
+              "id": "vm-id",
+              "user": "ssh-vm-user",
+              "pass": "ssh-key-passprashe",
+              "keys_paths": "<full_path_to_ssh_private_key>"
+            }
+        ],
+      "netbox":{
+        "host": "http://<your_netbox_address>",
+        "token": "api_token"
+      }
+}
+```
+
+Parser uses Yandex Cloud Service Account with `Auditor` and `Viewer` roles on both cloud and folder. Script exchanges `jwt-token` for `iam-token`. To create `jwt-token`, you should provide authorized key data:
+
+```json
+{
+  "private_key":"PLEASE DO NOT REMOVE THIS LINE! e.t.c",
+  "key_id": "",
+  "service_account_id": ""
+}
+```
+
+> More on API authorizing:  <br>
+> https://yandex.cloud/ru/docs/iam/operations/iam-token/create-for-sa <br>
+> https://yandex.cloud/ru/docs/iam/operations/authorized-key/create <br>
+> https://yandex.cloud/ru/docs/iam/operations/sa/set-access-bindings
+
+
+### Segment template structure
+
+<details>
+<summary>Long segment json</summary>
+
+```json
+{
+"segment": [
+{
+  "name": "test",
+  "address": "string",
+  <...some values...>
+  "servers_apply": true,
+  "servers": [
+    {
+      "id": 123,
+      "name": "",
+      "tag": "",
+      "OS_name": "",
+      "ip": [
+        {
+          "address": "",
+          "netmask": "",
+          "iface": ""
+        }
+      ],
+      "process": [
+        {
+          "address": "",
+          "port": 123,
+          "protocol": "",
+          "process": ""
+        }
+      ],
+      "package": [
+        {
+          "name": "",
+          "version": "",
+          "type": ""
+        }
+      ],
+      "vulns": [
+        {
+          "title": "",
+          "severity": "",
+          "name": "",
+          "version": ""
+        }
+      ]
+    }
+  ],
+  "hardware_apply": true,
+  "hardware": [
+    {
+      "name": "Web-сервер",
+      "tag": "",
+      "SN": "string",
+      "Model": "string",
+      "OS_apply": true,
+      "OS_name": "string",
+      "ip": "",
+      "locations": "",
+      "rack_locatoins": "",
+      "servers": [
+        {
+          "id": 123
+        }
+      ],
+      "virtualization_apply": true,
+      "virtualization_name": "string",
+      "virtual_servers": [
+        {
+          "id": 1
+        }
+      ]
+    }
+  ],
+  "controllers_apply": false,
+  "controllers": [
+    {
+      "name": "",
+      "tag": "",
+      "SN": "string",
+      "Model": "string",
+      "OS_apply": true,
+      "OS_name": "string",
+      "ip": "",
+      "type": "scada",
+      "locations": "",
+      "rack_locatoins": ""
+    }
+  ],
+  "external_media_apply": false,
+  "external_media": [
+    {
+      "tag": "",
+      "name": "",
+      "type": "",
+      "registration_number": "",
+      "SN": ""
+    }
+  ],
+  "shd_apply": false,
+  "shd": [
+    {
+      "tag": "",
+      "name": "",
+      "model": "",
+      "OS_apply": true,
+      "OS_name": "string",
+      "locations": "",
+      "rack_locatoins": "",
+      "type": "",
+      "services": [
+        {
+          "apply": true,
+          "ML": false
+        }
+      ],
+      "port": [
+        {
+          "apply": false,
+          "number": 80,
+          "protocol": "https",
+          "service": "nginx"
+        }
+      ]
+    }
+  ],
+  "telecom_apply": true,
+  "telecom": [
+    {
+      "tag": "",
+      "type": "",
+      "name": "example",
+      "SN": "string",
+      "model": "string",
+      "OS": "string",
+      "ip": "",
+      "locations": "",
+      "rack_locatoins": ""
+    }
+  ],
+  "virtual_segment_apply": false,
+  "virtual_segment": [
+    {
+      "operator": "example",
+      "model": "",
+      "name": "example",
+      "tag": "",
+      "dns": "",
+      "attestations_apply": false,
+      "locations": "",
+      "attestations": [
+        {
+          "name": "",
+          "date": "",
+          "number": ""
+        }
+      ],
+      "guard": "string",
+      "fire_safety": "string",
+      "electricity": "string",
+      "KZ": "string",
+      "conditions": "string",
+      "rent": {
+        "contract_number": 0,
+        "contract_date": "string",
+        "name": "string",
+        "owner": "string",
+        "matrix_risk": {
+          "url": "string",
+          "number": "string",
+          "date": "string"
+        }
+      },
+      "services": [
+        {
+          "name": "",
+          "tag": "",
+          "type": ""
+        }
+      ],
+      "virtual_servers": [
+        {
+          "id": 0
+        }
+      ]
+    }
+  ]
+}
+]
+}
+```
+</details>
+
+Segment template contains templates for network entities, such as `hardware`, `shd` e.t.c. `"servers"` list will contain local servers and cloud virtual machines. Script also maps processed fields from `.drawio` diagram to segment template objects. 
+
+For example, if diagram `hardware` template contains only `"name": "name"`, in result file other fields will have values from segment template.  
+
+Yandex Cloud and VMWare Cloud Director entities placed in `yacloud` and `vmware_cloud_director` respectively.
+

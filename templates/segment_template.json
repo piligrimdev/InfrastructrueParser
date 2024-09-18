@@ -76,7 +76,7 @@
           "OS_name": "string",
           "ip": "",
           "locations": "",
-          "rack_locatoins": "",
+          "rack_locations": "",
           "servers": [
             {
               "id": 123
@@ -103,7 +103,7 @@
           "ip": "",
           "type": "scada",
           "locations": "",
-          "rack_locatoins": ""
+          "rack_locations": ""
         }
       ],
       "external_media_apply": false,
@@ -125,7 +125,7 @@
           "OS_apply": true,
           "OS_name": "string",
           "locations": "",
-          "rack_locatoins": "",
+          "rack_locations": "",
           "type": "",
           "services": [
             {
@@ -154,7 +154,7 @@
           "OS": "string",
           "ip": "",
           "locations": "",
-          "rack_locatoins": ""
+          "rack_locations": ""
         }
       ],
       "virtual_segment_apply": false,

@@ -95,7 +95,11 @@ def write_to_result_json(data: dict, mapping_template: dict, segment_template: d
 
             #map here
             for mapping_key in mapping_template[data_key].keys():
-                record_template[mapping_key] = record[mapping_template[data_key][mapping_key]]
+                if mapping_template[data_key][mapping_key] not in record.keys():
+                    print(f"No {mapping_template[data_key][mapping_key]} key in object {record}."
+                          f" {mapping_template[data_key][mapping_key]} value set to default")
+                else:
+                    record_template[mapping_key] = record[mapping_template[data_key][mapping_key]]
 
             record_list.append(record_template.copy())
         segment_template['segment'][0][data_key] = record_list.copy()

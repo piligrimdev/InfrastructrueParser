@@ -1,0 +1,27 @@
+{
+    "yacloud": {
+        "key_data_path": "<full_path_to_authorized-key_data_json>",
+        "org": "org-name",
+        "cloud": "cloud-name",
+        "folder": "folder-name"
+    },
+    "vmware": {
+        "user": "username",
+        "password": "password",
+        "org": "org-name",
+        "host": "https://<address_of_vmware_cloud>/",
+        "vdc": "vdc-name"
+    },
+    "virtual_machines": [
+        {
+            "id": "vm-id",
+            "user": "ssh-vm-user",
+            "pass": "ssh-key-passprashe",
+            "keys_paths": "<full_path_to_ssh_private_key>"
+        }
+    ],
+    "netbox":{
+        "host": "http://<your_netbox_address>",
+        "token": "api_token"
+    }
+}

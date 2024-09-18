@@ -4,12 +4,13 @@ import sys
 from parsers.utils.format_output import AutoIndent
 from parsers.ParseMethods import *
 from parsers.utils.general import *
+from netbox.netbox_upload_methods import *
 
 
 def main(input_dir: pathlib.Path, output_dir: pathlib.Path,
          servers_template_path: pathlib.Path, drawio_template_path: pathlib.Path,
-         result_template_path: pathlib.Path, yacloud_account_file_path: pathlib.Path = None,
-         vms_credentials: dict = None, vmware_creds: dict = None) -> None:
+         result_template_path: pathlib.Path, credentials: dict = None, parseYandexCloudEnt: bool = False,
+         parseYandexCloudVMs: bool = False, parseVMWareCloudEnt: bool = False, uploadNB: bool = False) -> None:
 
     # handle bad json file
     result_template = read_json(result_template_path)
@@ -28,21 +29,21 @@ def main(input_dir: pathlib.Path, output_dir: pathlib.Path,
     servers_template = read_json(servers_template_path)
     local_servers = parse_local_servers(input_dir, servers_template)
 
-    print('-' * 40)
-    if yacloud_account_file_path is not None:
-        yacloud_account = read_json(yacloud_account_file_path)
-        if vms_credentials is not None: # vms_credentials are required for yacloud parsing
-            yacloud_servers = parse_yandex_cloud_vms(yacloud_account, vms_credentials)
-        else:
-            yacloud_servers = {'servers': []}
-        yacloud_objects = parse_yandex_cloud_entities(yacloud_account)
+    if parseYandexCloudEnt:
+        print('-' * 40)
+        yacloud_objects = parse_yandex_cloud_entities(credentials["yacloud"])
     else:
-        yacloud_servers = {'servers': []}
         yacloud_objects = {}
 
-    print('-' * 40)
-    if vmware_creds is not None:
-        vmware_objects = parse_vmware_cloud_director_entities(vmware_creds, vmware_creds['vcd'])
+    if parseYandexCloudVMs:
+        print('-' * 40)
+        yacloud_servers = parse_yandex_cloud_vms(credentials["yacloud"], credentials["virtual_machines"])
+    else:
+        yacloud_servers = {'servers': []}
+
+    if parseVMWareCloudEnt:
+        print('-' * 40)
+        vmware_objects = parse_vmware_cloud_director_entities(credentials["vmware"], credentials["vmware"]['vdc'])
     else:
         vmware_objects = {}
 
@@ -56,6 +57,10 @@ def main(input_dir: pathlib.Path, output_dir: pathlib.Path,
         json.dump(segment, file, ensure_ascii=False, indent=4)
         print(f'Saved as {output_file}')
 
+    if uploadNB:
+        print('-' * 40)
+        fill_netbox(credentials['netbox'], segment['segment'][0])
+
 
 if __name__ == '__main__':
     sys.stdout = AutoIndent(sys.stdout)
@@ -66,24 +71,35 @@ if __name__ == '__main__':
 
     required.add_argument('-inDir', help='Path to directory containing drawio .xml file '
                                          'and directories with winaudit'
-                                         ' and scanoval .html files', required=True)
+                                         ' and scanoval .html files', required=True,
+                          action='store')
 
     # todo add vms data arguments
 
-    optional.add_argument('-outDir', help='Path to output directory for resulting .json file')
-    optional.add_argument('-servers-template', help='Path to servers parsing template (.json)')
-    optional.add_argument('-drawio-template', help='Path to drawio parsing template (.json)')
-    optional.add_argument('-result-template', help='Path to result template (.json)')
+    optional.add_argument('-outDir', help='Path to output directory for resulting .json file',
+                          action='store')
+    optional.add_argument('-servers-template', help='Path to servers parsing template (.json)',
+                          action='store')
+    optional.add_argument('-drawio-template', help='Path to drawio parsing template (.json)',
+                          action='store')
+    optional.add_argument('-result-template', help='Path to result template (.json)',
+                          action='store')
 
-    optional.add_argument('-yaCloudAcc', help='Path to json file with oauth token organization, cloud and folder data'
-                                              'for accessing virtual machines on Yandex.Cloud.')
-    optional.add_argument('-vmCredSrc', help='Way to get credentials for accessing virtual machines on '
-                                             'Yandex.Cloud. Choose from (json)')
-    optional.add_argument('-vmCredJson', help='Path to json containing credentials for'
-                                              ' accessing virtual machines on Yandex.Cloud.')
+    optional.add_argument('-creds', help='Path to json file with credentials for Yandex Cloud,'
+                                         'VMware Cloud Director, YaCloud Virtual machines and Netbox.',
+                          action='store')
+    optional.add_argument('-yaCloudEnt', help='Enter this key to retrieve Yandex Cloud entities.',
+                          action="store_true", dest="yaCloudEnt")
+    optional.add_argument('-yaCloudVM', help='Enter this key to retrieve Yandex Cloud Virtual Machines'
+                                             ' audit data.',
+                          action="store_true", dest="yaCloudVM")
 
-    optional.add_argument('-vmWareCloudAcc', help='Path to json file with host url, username, password'
-                                                  'and tenant name for accessing VMWare Cloud Director API.')
+    optional.add_argument('-vmWareEnt', help='Enter this key to retrieve VMWare Cloud Director'
+                                             ' entities.',
+                          action="store_true", dest="vmWareEnt")
+
+    optional.add_argument('-uploadNB', help='Enter this key to upload resulting segment to NetBox',
+                          action="store_true", dest="uploadNB")
 
     args = arg_parser.parse_args()
 
@@ -92,41 +108,43 @@ if __name__ == '__main__':
         print("Invalid input dir path")
         quit()
 
-    # long validation of virtual machines arguments
-    ya_cloud_acc = args.yaCloudAcc
-    ya_cloud_acc_path = None
-    vmCreds = None
-    if ya_cloud_acc is not None:  # if cloud info is provided (i.e. user wants to get data from yacloud)
-        ya_cloud_acc_path = pathlib.Path(ya_cloud_acc)
-        if ya_cloud_acc_path.exists():  # and cloud data json path is correct
-            vmCredSrc = str(args.vmCredSrc)
-            if vmCredSrc == 'json':  # looking for a way to get creds
-                if args.vmCredJson is not None:  # if choice is json and file path provided
-                    credPath = pathlib.Path(args.vmCredJson)
-                    if credPath.exists():  # validating path and retrieving json as dict
-                        with open(credPath, 'r', encoding='utf-8') as file:
-                            vmCreds = json.load(file)
-                    else:
-                        print('Invalid vmCredJson path')  # if invalid - quit
-                        quit()
-                else:  # if no json path provided - quit
-                    print('If vmCredSrc=json you should provide path to json with key -vmCredJson')
-                    quit()
-            elif vmCredSrc == 'None':
-                pass
-            else:
-                print('No -vmCredSrc provided to scan virtual machines on Yandex cloud.')
-                quit()
-
-    vmware_acc = args.vmWareCloudAcc
-    vmware_creds = None
-    if vmware_acc is not None:
-        vmware_path = pathlib.Path(vmware_acc)
-        if vmware_path.exists():
-            with open(vmware_path, 'r', encoding='utf-8') as file:
-                vmware_creds = json.load(file)
+    creds = None
+    creds_arg = args.creds
+    if creds_arg is not None:
+        creds_path = pathlib.Path(creds_arg)
+        if creds_path.exists():
+            creds = read_json(creds_path)
         else:
-            print('Invalid vmWareCloudAcc path')
+            print('Invalid credentials file path')
+
+    yaEnt = False
+    yaVM = False
+    vmWareEnt = False
+    uploadNB = False
+
+    if args.yaCloudEnt:
+        if creds is None or "yacloud" not in creds.keys():
+            print('For parsing Yandex Cloud entities you must provide credentials json file.')
+        else:
+            yaEnt = True
+
+    if args.yaCloudVM:
+        if creds is None or ("virtual_machines" not in creds.keys() or "yacloud" not in creds.keys()):
+            print('For parsing Yandex Cloud virtual machines you must provide credentials json file.')
+        else:
+            yaVM = True
+
+    if args.vmWareEnt:
+        if creds is None or "vmware" not in creds.keys():
+            print('For parsing VMWare Cloud Director entities you must provide valid credentials json file.')
+        else:
+            vmWareEnt = True
+
+    if args.uploadNB:
+        if creds is None or "netbox" not in creds.keys():
+            print('For uploading data to NetBox you must provide valid credentials json file.')
+        else:
+            uploadNB = True
 
     if args.outDir is not None:
         outputDir = pathlib.Path(args.outDir)
@@ -160,5 +178,5 @@ if __name__ == '__main__':
         print("Invalid result template file path")
         quit()
 
-    main(inputDir, outputDir, servers_template, drawio_template, result_template, ya_cloud_acc_path, vmCreds,
-         vmware_creds)
+    main(inputDir, outputDir, servers_template, drawio_template, result_template, credentials=creds,
+         parseYandexCloudEnt=yaEnt, parseYandexCloudVMs=yaVM, parseVMWareCloudEnt=vmWareEnt, uploadNB=uploadNB)

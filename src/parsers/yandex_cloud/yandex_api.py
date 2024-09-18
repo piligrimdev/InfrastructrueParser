@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
+import json
 import requests
+import time
+import jwt
+import cryptography
 
 
 class YandexAPI:
@@ -16,18 +20,40 @@ class YandexAPI:
         except Exception as e:
             raise Exception(f'Something went wrong with {url} request connection .\n {e}')
 
-    def __init__(self, oauth: str):
-        self._oauth = oauth
+    def __init__(self, key_path: str):
         self._session = requests.session()
         self.headers = {}
-        # Getting iam
+
+        # src: yacloud docs
+        with open(key_path, 'r') as f:
+            obj = f.read()
+            obj = json.loads(obj)
+            private_key = obj['private_key']
+            key_id = obj['key_id']
+            service_account_id = obj['service_account_id']
+
+        now = int(time.time())
+        payload = {
+            'aud': 'https://iam.api.cloud.yandex.net/iam/v1/tokens',
+            'iss': service_account_id,
+            'iat': now,
+            'exp': now + 3600
+        }
+
+        encoded_token = jwt.encode(
+            payload,
+            private_key,
+            algorithm='PS256',
+            headers={'kid': key_id}
+        )
+
         iam_resp = self._session.post('https://iam.api.cloud.yandex.net/iam/v1/tokens'
-                                      , json={'yandexPassportOauthToken': self._oauth})
+                                      , json={'jwt': encoded_token})
 
         if YandexAPI.handle_bad_request(iam_resp):
-            self._iam = iam_resp.json()['iamToken']
+            iam = iam_resp.json()['iamToken']
 
-        self.headers['Authorization'] = f"Bearer {self._iam}"
+        self.headers['Authorization'] = f"Bearer {iam}"
 
     def get_all_organizations_list(self) -> list:
         # TODO pagination to get all orgs
@@ -103,5 +129,4 @@ class YandexAPI:
     def __del__(self):
         self._session.close()
         del self._session
-        del self._oauth
         del self.headers

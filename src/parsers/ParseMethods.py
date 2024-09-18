@@ -80,15 +80,15 @@ def parse_drawio(drawio_file: TextIO, parse_template: dict,
     return result_template
 
 
-def parse_yandex_cloud_vms(cloud_creds: dict, vm_credentials: dict) -> dict:
+def parse_yandex_cloud_vms(cloud_creds: dict, vm_credentials: list[dict]) -> dict:
     try:
-        parser = YandexCloudParser(cloud_creds['oauth'])
+        parser = YandexCloudParser(cloud_creds['key_data_path'])
         print('Parsing Yandex Cloud virtual machines')
         folder_id = parser.get_folder_id(cloud_creds['org'], cloud_creds['cloud'],  cloud_creds['folder'])
         print(f"Folder with name '{cloud_creds['folder']}' founded")
         vms_data = parser.get_virtual_machines_ips(folder_id)
         print('Virtual machines IPs retrieved')
-        result = parser.get_yacloud_server_objects(vms_data, vm_credentials['virtual_machines'])
+        result = parser.get_yacloud_server_objects(vms_data, vm_credentials)
     except Exception as e:
         print(f"Error occurred while parsing yacloud. Leaving yacloud's 'servers' empty.\n\tError: {e}")
         result = {'servers': []}
@@ -97,7 +97,7 @@ def parse_yandex_cloud_vms(cloud_creds: dict, vm_credentials: dict) -> dict:
 
 def parse_yandex_cloud_entities(cloud_creds: dict) -> dict:
     try:
-        parser = YandexCloudParser(cloud_creds['oauth'])
+        parser = YandexCloudParser(cloud_creds['key_data_path'])
         print(f"Parsing Yandex Cloud Entities")
         folder_id = parser.get_folder_id(cloud_creds['org'], cloud_creds['cloud'],  cloud_creds['folder'])
         print(f"Folder with name '{cloud_creds['folder']}' founded")
@@ -113,8 +113,12 @@ def parse_vmware_cloud_director_entities(cloud_creds: dict, vdc_name: str) -> di
         parser = VMWareCloudDirectorAPI(cloud_creds)
         print(f"Parsing VMWare Cloud Director on address {cloud_creds['host']}")
         vdc = get_vmware_vdc_by_name(parser, vdc_name)
-        print(f"VDC with name {vdc_name} founded")
-        result = parse_vmware_vdc(parser, vdc)
+        if vdc is not None:
+            print(f"VDC with name {vdc_name} founded")
+            result = parse_vmware_vdc(parser, vdc)
+        else:
+            print(f"No VDC with name {vdc_name} founded")
+            result = dict()
     except Exception as e:
         print(f"Error occurred while parsing VMWare Cloud Director entities. "
               f"Leaving 'vmware_cloud_director' empty.\n\tError: {e}")
